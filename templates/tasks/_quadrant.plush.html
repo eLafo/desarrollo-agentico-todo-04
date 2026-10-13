@@ -1,0 +1,19 @@
+<section class="quadrant quadrant-<%= slug %>" id="quadrant-<%= slug %>" aria-labelledby="quadrant-<%= slug %>-heading">
+  <header class="quadrant-header">
+    <h2 id="quadrant-<%= slug %>-heading"><%= label %></h2>
+    <p class="quadrant-hint"><%= hint %></p>
+    <p class="quadrant-count"><%= len(items) %> <%= if (len(items) == 1) { %>tarea<% } else { %>tareas<% } %></p>
+  </header>
+  <%= if (len(items) == 0) { %>
+    <p class="quadrant-empty">Sin tareas en este cuadrante.</p>
+  <% } else { %>
+    <ul class="quadrant-list">
+      <%= for (t) in items { %>
+        <li class="quadrant-task<%= if (t.Completed) { %> task-completed<% } %>">
+          <span class="task-title"><%= t.Title %></span>
+          <%= if (t.Completed) { %><span class="task-status">Completada</span><% } %>
+        </li>
+      <% } %>
+    </ul>
+  <% } %>
+</section>

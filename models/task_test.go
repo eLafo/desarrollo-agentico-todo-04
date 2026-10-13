@@ -69,3 +69,39 @@ func (ms *ModelSuite) Test_Task_Toggle_Persists() {
 	ms.NoError(ms.DB.Find(reloaded, task.ID))
 	ms.True(reloaded.Completed)
 }
+
+func (ms *ModelSuite) Test_Task_Dimensions_DefaultUnestimated() {
+	task := &Task{Title: "Sin dimensiones"}
+	verrs, err := ms.DB.ValidateAndCreate(task)
+	ms.NoError(err)
+	ms.False(verrs.HasAny())
+
+	found := &Task{}
+	ms.NoError(ms.DB.Find(found, task.ID))
+	ms.Nil(found.Urgent)
+	ms.Nil(found.Important)
+}
+
+func (ms *ModelSuite) Test_Task_Dimensions_Persist() {
+	task := &Task{Title: "Con dimensiones", Urgent: mark(true), Important: mark(false)}
+	verrs, err := ms.DB.ValidateAndCreate(task)
+	ms.NoError(err)
+	ms.False(verrs.HasAny())
+
+	found := &Task{}
+	ms.NoError(ms.DB.Find(found, task.ID))
+	ms.NotNil(found.Urgent)
+	ms.NotNil(found.Important)
+	ms.True(*found.Urgent)
+	ms.False(*found.Important)
+
+	found.Urgent = nil
+	found.Important = mark(true)
+	ms.NoError(ms.DB.Update(found))
+
+	reloaded := &Task{}
+	ms.NoError(ms.DB.Find(reloaded, task.ID))
+	ms.Nil(reloaded.Urgent)
+	ms.NotNil(reloaded.Important)
+	ms.True(*reloaded.Important)
+}

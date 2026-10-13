@@ -1,0 +1,18 @@
+<div class="task-dimensions">
+  <div class="dimension-field">
+    <label for="task-urgent">Urgencia</label>
+    <select id="task-urgent" name="urgent">
+      <option value=""<%= if (task.UrgentValue() == "") { %> selected<% } %>>Sin estimar</option>
+      <option value="true"<%= if (task.UrgentValue() == "true") { %> selected<% } %>>Urgente</option>
+      <option value="false"<%= if (task.UrgentValue() == "false") { %> selected<% } %>>No urgente</option>
+    </select>
+  </div>
+  <div class="dimension-field">
+    <label for="task-important">Importancia</label>
+    <select id="task-important" name="important">
+      <option value=""<%= if (task.ImportantValue() == "") { %> selected<% } %>>Sin estimar</option>
+      <option value="true"<%= if (task.ImportantValue() == "true") { %> selected<% } %>>Importante</option>
+      <option value="false"<%= if (task.ImportantValue() == "false") { %> selected<% } %>>No importante</option>
+    </select>
+  </div>
+</div>

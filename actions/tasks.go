@@ -11,6 +11,30 @@ import (
 	"github.com/gobuffalo/validate/v3"
 )
 
+// taskForm recoge los campos que la persona usuaria fija al crear o editar una tarea.
+type taskForm struct {
+	Title     string `form:"title" json:"title"`
+	Urgent    string `form:"urgent" json:"urgent"`
+	Important string `form:"important" json:"important"`
+}
+
+// applyTo copia el formulario en la tarea: recorta el título y convierte las
+// dimensiones; si alguna no es válida devuelve el error sin tocar la tarea.
+func (f taskForm) applyTo(task *models.Task) error {
+	urgent, err := models.ParseDimension(f.Urgent)
+	if err != nil {
+		return err
+	}
+	important, err := models.ParseDimension(f.Important)
+	if err != nil {
+		return err
+	}
+	task.Title = strings.TrimSpace(f.Title)
+	task.Urgent = urgent
+	task.Important = important
+	return nil
+}
+
 // TasksIndex muestra la lista de tareas y el formulario de creación.
 func TasksIndex(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
@@ -30,11 +54,14 @@ func TasksIndex(c buffalo.Context) error {
 func TasksCreate(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
 
-	task := &models.Task{}
-	if err := c.Bind(task); err != nil {
+	input := taskForm{}
+	if err := c.Bind(&input); err != nil {
 		return err
 	}
-	task.Title = strings.TrimSpace(task.Title)
+	task := &models.Task{}
+	if err := input.applyTo(task); err != nil {
+		return c.Error(http.StatusBadRequest, err)
+	}
 
 	verrs, err := tx.ValidateAndCreate(task)
 	if err != nil {
@@ -71,7 +98,7 @@ func TasksEdit(c buffalo.Context) error {
 	return c.Render(http.StatusOK, r.HTML("tasks/edit.plush.html"))
 }
 
-// TasksUpdate actualiza solo el título, conservando los demás datos de la tarea.
+// TasksUpdate actualiza el título y las dimensiones de Eisenhower, conservando los demás datos de la tarea.
 func TasksUpdate(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
 
@@ -80,13 +107,13 @@ func TasksUpdate(c buffalo.Context) error {
 		return c.Error(http.StatusNotFound, err)
 	}
 
-	input := struct {
-		Title string `form:"title" json:"title"`
-	}{}
+	input := taskForm{}
 	if err := c.Bind(&input); err != nil {
 		return err
 	}
-	task.Title = strings.TrimSpace(input.Title)
+	if err := input.applyTo(task); err != nil {
+		return c.Error(http.StatusBadRequest, err)
+	}
 
 	verrs, err := tx.ValidateAndUpdate(task)
 	if err != nil {
@@ -100,6 +127,27 @@ func TasksUpdate(c buffalo.Context) error {
 
 	c.Flash().Add("success", "Tarea actualizada.")
 	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+// TasksEisenhower muestra en los cuatro cuadrantes de Eisenhower las tareas con
+// las dos dimensiones estimadas y cuenta las que no aparecen por falta de
+// alguna. Las completadas solo se incluyen con show_completed=1.
+func TasksEisenhower(c buffalo.Context) error {
+	tx := c.Value("tx").(*pop.Connection)
+	showCompleted := c.Param("show_completed") == "1"
+
+	query := tx.Order("created_at asc, id asc")
+	if !showCompleted {
+		query = query.Where("completed = ?", false)
+	}
+	tasks := models.Tasks{}
+	if err := query.All(&tasks); err != nil {
+		return err
+	}
+
+	c.Set("matrix", models.NewEisenhowerMatrix(tasks))
+	c.Set("show_completed", showCompleted)
+	return c.Render(http.StatusOK, r.HTML("tasks/eisenhower.plush.html"))
 }
 
 // TasksToggle alterna una tarea entre completada y pendiente.

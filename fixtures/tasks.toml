@@ -24,3 +24,77 @@ name = "tres tareas"
       completed = true
       created_at = "<%= now() %>"
       updated_at = "<%= now() %>"
+
+[[scenario]]
+name = "matriz de eisenhower"
+
+  [[scenario.table]]
+    name = "tasks"
+
+    [[scenario.table.row]]
+      id = "<%= uuid() %>"
+      title = "Resolver la incidencia del servidor"
+      urgent = true
+      important = true
+      completed = false
+      created_at = "<%= now() %>"
+      updated_at = "<%= now() %>"
+
+    [[scenario.table.row]]
+      id = "<%= uuid() %>"
+      title = "Preparar el plan de formación"
+      urgent = false
+      important = true
+      completed = false
+      created_at = "<%= now() %>"
+      updated_at = "<%= now() %>"
+
+    [[scenario.table.row]]
+      id = "<%= uuid() %>"
+      title = "Confirmar la reserva de la sala"
+      urgent = true
+      important = false
+      completed = false
+      created_at = "<%= now() %>"
+      updated_at = "<%= now() %>"
+
+    [[scenario.table.row]]
+      id = "<%= uuid() %>"
+      title = "Ordenar el archivo antiguo"
+      urgent = false
+      important = false
+      completed = false
+      created_at = "<%= now() %>"
+      updated_at = "<%= now() %>"
+
+    [[scenario.table.row]]
+      id = "<%= uuid() %>"
+      title = "Presentar el impuesto trimestral"
+      urgent = true
+      important = true
+      completed = true
+      created_at = "<%= now() %>"
+      updated_at = "<%= now() %>"
+
+    [[scenario.table.row]]
+      id = "<%= uuid() %>"
+      title = "Revisar los contratos"
+      urgent = true
+      completed = false
+      created_at = "<%= now() %>"
+      updated_at = "<%= now() %>"
+
+    [[scenario.table.row]]
+      id = "<%= uuid() %>"
+      title = "Actualizar el inventario"
+      completed = false
+      created_at = "<%= now() %>"
+      updated_at = "<%= now() %>"
+
+    [[scenario.table.row]]
+      id = "<%= uuid() %>"
+      title = "Archivar las facturas antiguas"
+      important = false
+      completed = true
+      created_at = "<%= now() %>"
+      updated_at = "<%= now() %>"

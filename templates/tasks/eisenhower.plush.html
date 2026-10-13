@@ -1,0 +1,26 @@
+<header class="page-header">
+  <h1>Matriz de Eisenhower</h1>
+</header>
+
+<div class="matrix-toolbar">
+  <%= if (show_completed) { %>
+    <p>Se muestran las tareas completadas.</p>
+    <a href="/eisenhower" class="button">Ocultar completadas</a>
+  <% } else { %>
+    <p>Las tareas completadas están ocultas.</p>
+    <a href="/eisenhower?show_completed=1" class="button">Mostrar completadas</a>
+  <% } %>
+</div>
+
+<%= if (matrix.Unestimated == 1) { %>
+  <p class="matrix-notice">1 tarea no aparece porque le falta estimar la urgencia o la importancia.</p>
+<% } else if (matrix.Unestimated > 1) { %>
+  <p class="matrix-notice"><%= matrix.Unestimated %> tareas no aparecen porque les falta estimar la urgencia o la importancia.</p>
+<% } %>
+
+<div class="eisenhower-grid">
+  <%= partial("tasks/quadrant.plush.html", {slug: "do", label: "Hacer", hint: "Urgente e importante", items: matrix.Do}) %>
+  <%= partial("tasks/quadrant.plush.html", {slug: "schedule", label: "Planificar", hint: "Importante y no urgente", items: matrix.Schedule}) %>
+  <%= partial("tasks/quadrant.plush.html", {slug: "delegate", label: "Delegar", hint: "Urgente y no importante", items: matrix.Delegate}) %>
+  <%= partial("tasks/quadrant.plush.html", {slug: "eliminate", label: "Eliminar", hint: "Ni urgente ni importante", items: matrix.Eliminate}) %>
+</div>
