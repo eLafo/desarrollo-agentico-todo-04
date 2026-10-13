@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -9,14 +10,25 @@ import (
 	"github.com/gobuffalo/buffalo"
 	"github.com/gobuffalo/pop/v6"
 	"github.com/gobuffalo/validate/v3"
+	"github.com/gofrs/uuid"
 )
+
+// orderedTasks devuelve todas las tareas en el orden definido por el usuario.
+// created_at e id desempatan de forma determinista.
+func orderedTasks(tx *pop.Connection) (models.Tasks, error) {
+	tasks := models.Tasks{}
+	if err := tx.Order("position asc, created_at asc, id asc").All(&tasks); err != nil {
+		return nil, err
+	}
+	return tasks, nil
+}
 
 // TasksIndex muestra la lista de tareas y el formulario de creación.
 func TasksIndex(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
 
-	tasks := models.Tasks{}
-	if err := tx.Order("created_at asc, id asc").All(&tasks); err != nil {
+	tasks, err := orderedTasks(tx)
+	if err != nil {
 		return err
 	}
 
@@ -36,14 +48,20 @@ func TasksCreate(c buffalo.Context) error {
 	}
 	task.Title = strings.TrimSpace(task.Title)
 
+	var maxPosition int
+	if err := tx.RawQuery("SELECT COALESCE(MAX(position), 0) FROM tasks").First(&maxPosition); err != nil {
+		return err
+	}
+	task.Position = maxPosition + 1
+
 	verrs, err := tx.ValidateAndCreate(task)
 	if err != nil {
 		return err
 	}
 
 	if verrs.HasAny() {
-		tasks := models.Tasks{}
-		if err := tx.Order("created_at asc, id asc").All(&tasks); err != nil {
+		tasks, err := orderedTasks(tx)
+		if err != nil {
 			return err
 		}
 
@@ -134,4 +152,53 @@ func TasksDestroy(c buffalo.Context) error {
 
 	c.Flash().Add("success", "Tarea eliminada.")
 	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+// TasksReorder guarda el orden completo de las tareas recibido como una lista
+// repetida de task_ids. No toca updated_at: reordenar no edita el contenido.
+func TasksReorder(c buffalo.Context) error {
+	tx := c.Value("tx").(*pop.Connection)
+
+	if err := c.Request().ParseForm(); err != nil {
+		return c.Error(http.StatusUnprocessableEntity, err)
+	}
+	rawIDs := c.Request().Form["task_ids"]
+	if len(rawIDs) == 0 {
+		return c.Error(http.StatusUnprocessableEntity, fmt.Errorf("task_ids es obligatorio"))
+	}
+
+	ids := make([]uuid.UUID, 0, len(rawIDs))
+	seen := make(map[uuid.UUID]bool, len(rawIDs))
+	for _, raw := range rawIDs {
+		id, err := uuid.FromString(raw)
+		if err != nil {
+			return c.Error(http.StatusUnprocessableEntity, fmt.Errorf("identificador no válido: %q", raw))
+		}
+		if seen[id] {
+			return c.Error(http.StatusUnprocessableEntity, fmt.Errorf("identificador duplicado: %s", id))
+		}
+		seen[id] = true
+		ids = append(ids, id)
+	}
+
+	args := make([]interface{}, len(ids))
+	for i, id := range ids {
+		args[i] = id
+	}
+	count, err := tx.Where("id in (?)", args...).Count(&models.Task{})
+	if err != nil {
+		return err
+	}
+	if count != len(ids) {
+		return c.Error(http.StatusUnprocessableEntity, fmt.Errorf("alguna tarea no existe"))
+	}
+
+	for i, id := range ids {
+		if err := tx.RawQuery("UPDATE tasks SET position = ? WHERE id = ?", i+1, id).Exec(); err != nil {
+			return err
+		}
+	}
+
+	c.Response().WriteHeader(http.StatusNoContent)
+	return nil
 }

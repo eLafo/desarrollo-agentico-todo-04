@@ -121,12 +121,43 @@ h1 {
 
 .task {
   display: grid;
-  grid-template-columns: 44px minmax(0, 1fr) auto;
+  grid-template-columns: 28px 44px minmax(0, 1fr) auto;
   align-items: start;
   column-gap: 0.3rem;
   min-height: 61px;
   padding: 0.5rem 0;
   border-bottom: 1px solid var(--color-border);
+}
+
+.drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  min-height: 44px;
+  padding: 0;
+  color: var(--color-muted);
+  background: transparent;
+  border: 0;
+  border-radius: 6px;
+  cursor: grab;
+  opacity: 0.6;
+}
+
+.drag-handle:hover,
+.drag-handle:focus-visible {
+  opacity: 1;
+}
+
+.drag-handle svg {
+  width: 16px;
+  height: 16px;
+}
+
+.task-dragging {
+  opacity: 0.5;
+  background: #ffffff;
+  box-shadow: 0 0 0 2px var(--color-focus);
 }
 
 .task-title {
@@ -434,7 +465,7 @@ input:focus-visible {
   }
 
   .task {
-    grid-template-columns: 36px minmax(0, 1fr) auto;
+    grid-template-columns: 28px 36px minmax(0, 1fr) auto;
   }
 
   .task-toggle-button,
