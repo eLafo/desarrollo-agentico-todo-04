@@ -95,6 +95,41 @@ document.addEventListener("submit", function (event) {
     return false;
   }
 
+  // Lleva la tarea al principio (direction < 0) o al final (direction > 0).
+  function shiftToEdge(item, direction) {
+    var moved = false;
+    while (shift(item, direction)) {
+      moved = true;
+    }
+    return moved;
+  }
+
+  // Cierra un movimiento ya hecho en el DOM: actualiza los botones de mover,
+  // mantiene la tarea a la vista, lo anuncia y guarda el orden.
+  function commitMove(item) {
+    syncMoveButtons();
+    item.scrollIntoView({ block: "nearest" });
+    announcePosition(item);
+    save();
+  }
+
+  function setUnavailable(button, unavailable) {
+    if (unavailable) {
+      button.setAttribute("aria-disabled", "true");
+    } else {
+      button.removeAttribute("aria-disabled");
+    }
+  }
+
+  // «Mover al principio» no está disponible en la primera tarea, ni «Mover al final» en la última.
+  function syncMoveButtons() {
+    var all = items();
+    all.forEach(function (item, index) {
+      setUnavailable(item.querySelector('[data-task-move="first"]'), index === 0);
+      setUnavailable(item.querySelector('[data-task-move="last"]'), index === all.length - 1);
+    });
+  }
+
   function applyOrder(ids) {
     var focused = document.activeElement;
     ids.forEach(function (id) {
@@ -103,6 +138,7 @@ document.addEventListener("submit", function (event) {
         list.appendChild(item);
       }
     });
+    syncMoveButtons();
     if (focused && list.contains(focused)) {
       focused.focus();
     }
@@ -227,8 +263,7 @@ document.addEventListener("submit", function (event) {
     }
     var current = stopDrag();
     if (!sameOrder(current.startIds, currentIds())) {
-      announcePosition(current.item);
-      save();
+      commitMove(current.item);
     }
   });
 
@@ -254,21 +289,28 @@ document.addEventListener("submit", function (event) {
     } else if (event.key === "ArrowDown") {
       moved = shift(item, 1);
     } else if (event.key === "Home") {
-      while (shift(item, -1)) {
-        moved = true;
-      }
+      moved = shiftToEdge(item, -1);
     } else if (event.key === "End") {
-      while (shift(item, 1)) {
-        moved = true;
-      }
+      moved = shiftToEdge(item, 1);
     } else {
       return;
     }
     event.preventDefault();
     if (moved) {
-      item.scrollIntoView({ block: "nearest" });
-      announcePosition(item);
-      save();
+      commitMove(item);
+    }
+  });
+
+  // Botones «Mover al principio» y «Mover al final». El foco se queda en el botón,
+  // porque la tarea no sale del DOM.
+  list.addEventListener("click", function (event) {
+    var button = event.target.closest("[data-task-move]");
+    if (!button || drag || button.getAttribute("aria-disabled") === "true") {
+      return;
+    }
+    var item = button.closest("[data-task-id]");
+    if (shiftToEdge(item, button.dataset.taskMove === "first" ? -1 : 1)) {
+      commitMove(item);
     }
   });
 })();

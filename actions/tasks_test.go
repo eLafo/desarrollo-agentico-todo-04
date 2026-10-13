@@ -312,6 +312,41 @@ func (as *ActionSuite) Test_TasksIndex_EmptyState_NoReorderForm() {
 	res := as.HTML("/").Get()
 	as.Equal(200, res.Code)
 	as.NotContains(res.Body.String(), "/tasks/order")
+	as.NotContains(res.Body.String(), "data-task-move")
+}
+
+func (as *ActionSuite) Test_TasksIndex_RendersMoveButtons() {
+	tasks := as.createTasks("Primera tarea", "Segunda tarea", "Tercera tarea")
+	a, b, c := tasks[0], tasks[1], tasks[2]
+	as.Equal(204, as.reorder(c, a, b))
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	body := res.Body.String()
+
+	as.Contains(body, `aria-label="Mover al principio: Primera tarea"`)
+	as.Contains(body, `aria-label="Mover al final: Primera tarea"`)
+	as.Equal(3, strings.Count(body, `data-task-move="first"`))
+	as.Equal(3, strings.Count(body, `data-task-move="last"`))
+	as.Equal(2, strings.Count(body, `aria-disabled="true"`))
+	as.assertOrder(body,
+		`data-task-id="`+c.ID.String()+`"`,
+		`data-task-move="first" aria-disabled="true"`,
+		`data-task-id="`+a.ID.String()+`"`,
+		`data-task-id="`+b.ID.String()+`"`,
+		`data-task-move="last" aria-disabled="true"`,
+	)
+}
+
+func (as *ActionSuite) Test_TasksIndex_SingleTask_MoveButtonsUnavailable() {
+	as.taskForEditing(false)
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+
+	body := res.Body.String()
+	as.Contains(body, `data-task-move="first" aria-disabled="true"`)
+	as.Contains(body, `data-task-move="last" aria-disabled="true"`)
 }
 
 func (as *ActionSuite) Test_TasksReorder_PersistsOrder() {
