@@ -10,9 +10,9 @@
   <%= if (len(tasks) == 0) { %>
     <p class="empty-state">No hay tareas todavía. Añade la primera con el formulario.</p>
   <% } else { %>
-    <ul class="task-list">
-      <%= for (t) in tasks { %>
-        <li class="task<%= if (t.Completed) { %> task-completed<% } %>">
+    <ul class="task-list" data-task-list>
+      <%= for (i, t) in tasks { %>
+        <li class="task<%= if (t.Completed) { %> task-completed<% } %>" data-task-id="<%= t.ID %>">
           <form action="/tasks/<%= t.ID %>/toggle" method="POST" class="task-toggle" data-task-toggle>
             <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>">
             <input type="hidden" name="_method" value="PUT">
@@ -48,10 +48,53 @@
                 </svg>
               </button>
             </form>
+            <button
+              type="button"
+              class="icon-action task-move-button"
+              data-task-move="first"<%= if (i == 0) { %> aria-disabled="true"<% } %>
+              aria-label="Mover al principio: <%= t.Title %>"
+              title="Mover al principio de la lista"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 4h14M12 20V8M7 13l5-5 5 5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="icon-action task-move-button"
+              data-task-move="last"<%= if (i == len(tasks) - 1) { %> aria-disabled="true"<% } %>
+              aria-label="Mover al final: <%= t.Title %>"
+              title="Mover al final de la lista"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M5 20h14M12 4v12M7 11l5 5 5-5" />
+              </svg>
+            </button>
+            <button
+              type="button"
+              class="icon-action task-drag-handle"
+              data-task-drag-handle
+              aria-label="Mover tarea: <%= t.Title %>"
+              aria-describedby="task-order-help"
+              title="Arrastrar para cambiar el orden"
+            >
+              <svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor">
+                <circle cx="9" cy="6" r="1.5" /><circle cx="15" cy="6" r="1.5" />
+                <circle cx="9" cy="12" r="1.5" /><circle cx="15" cy="12" r="1.5" />
+                <circle cx="9" cy="18" r="1.5" /><circle cx="15" cy="18" r="1.5" />
+              </svg>
+            </button>
           </div>
         </li>
       <% } %>
     </ul>
+    <p id="task-order-help" class="sr-only">Arrastra el asa de una tarea para cambiar el orden. Con el teclado, sitúate en el asa y usa las flechas arriba y abajo; Inicio y Fin la llevan al principio o al final.</p>
+    <p class="sr-only" aria-live="polite" data-task-order-status></p>
+    <p class="field-error" role="alert" data-task-order-error hidden></p>
+    <form action="/tasks/order" method="POST" data-task-order hidden>
+      <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>">
+      <input type="hidden" name="_method" value="PUT">
+    </form>
   <% } %>
 </section>
 

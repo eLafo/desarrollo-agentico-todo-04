@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"errors"
 	"net/http"
 	"strings"
 
@@ -9,6 +10,7 @@ import (
 	"github.com/gobuffalo/buffalo"
 	"github.com/gobuffalo/pop/v6"
 	"github.com/gobuffalo/validate/v3"
+	"github.com/gofrs/uuid"
 )
 
 // TasksIndex muestra la lista de tareas y el formulario de creación.
@@ -16,7 +18,7 @@ func TasksIndex(c buffalo.Context) error {
 	tx := c.Value("tx").(*pop.Connection)
 
 	tasks := models.Tasks{}
-	if err := tx.Order("created_at asc, id asc").All(&tasks); err != nil {
+	if err := tx.Order(models.TaskListOrder).All(&tasks); err != nil {
 		return err
 	}
 
@@ -43,7 +45,7 @@ func TasksCreate(c buffalo.Context) error {
 
 	if verrs.HasAny() {
 		tasks := models.Tasks{}
-		if err := tx.Order("created_at asc, id asc").All(&tasks); err != nil {
+		if err := tx.Order(models.TaskListOrder).All(&tasks); err != nil {
 			return err
 		}
 
@@ -55,6 +57,35 @@ func TasksCreate(c buffalo.Context) error {
 
 	c.Flash().Add("success", "Tarea creada.")
 	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+// TasksReorder guarda el orden de la lista recibido en task_ids, de la primera
+// a la última tarea.
+func TasksReorder(c buffalo.Context) error {
+	tx := c.Value("tx").(*pop.Connection)
+
+	req := c.Request()
+	if err := req.ParseForm(); err != nil {
+		return c.Error(http.StatusBadRequest, err)
+	}
+
+	ids := make([]uuid.UUID, 0, len(req.Form["task_ids"]))
+	for _, value := range req.Form["task_ids"] {
+		id, err := uuid.FromString(value)
+		if err != nil {
+			return c.Render(http.StatusUnprocessableEntity, r.JSON(map[string]string{"error": models.ErrTaskOrderMismatch.Error()}))
+		}
+		ids = append(ids, id)
+	}
+
+	if err := models.ReorderTasks(tx, ids); err != nil {
+		if errors.Is(err, models.ErrTaskOrderMismatch) {
+			return c.Render(http.StatusUnprocessableEntity, r.JSON(map[string]string{"error": err.Error()}))
+		}
+		return err
+	}
+
+	return c.Render(http.StatusNoContent, nil)
 }
 
 // TasksEdit muestra el formulario de edición de una tarea existente.

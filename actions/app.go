@@ -50,6 +50,9 @@ func App() *buffalo.App {
 
 		app.GET("/", TasksIndex)
 		app.POST("/tasks", TasksCreate)
+		// Debe registrarse antes que /tasks/{task_id}: las rutas se evalúan en orden
+		// de registro y PUT /tasks/{task_id} capturaría "order" como task_id.
+		app.PUT("/tasks/order", TasksReorder)
 		app.GET("/tasks/{task_id}/edit", TasksEdit)
 		app.PUT("/tasks/{task_id}", TasksUpdate)
 		app.PUT("/tasks/{task_id}/toggle", TasksToggle)
