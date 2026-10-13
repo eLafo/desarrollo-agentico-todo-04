@@ -237,3 +237,127 @@ func (as *ActionSuite) Test_TasksUpdate_InvalidID() {
 	res := as.HTML("/tasks/no-es-un-uuid").Put(url.Values{"title": {"Título nuevo"}})
 	as.Equal(404, res.Code)
 }
+
+func (as *ActionSuite) createTasks(titles ...string) []*models.Task {
+	tasks := make([]*models.Task, 0, len(titles))
+	for _, title := range titles {
+		task := &models.Task{Title: title}
+		verrs, err := as.DB.ValidateAndCreate(task)
+		as.NoError(err)
+		as.False(verrs.HasAny())
+		tasks = append(tasks, task)
+	}
+	return tasks
+}
+
+// assertListedInOrder comprueba que los títulos aparecen en la lista en ese orden.
+func (as *ActionSuite) assertListedInOrder(titles ...string) {
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	body := res.Body.String()
+	last := -1
+	for _, title := range titles {
+		index := strings.Index(body, `<span class="task-title">`+title+`</span>`)
+		as.Greater(index, last, title)
+		last = index
+	}
+}
+
+// moveTask envía el formulario de mover una tarea y devuelve el código de estado.
+func (as *ActionSuite) moveTask(task *models.Task, position string) int {
+	return as.HTML("/tasks/%s/move", task.ID).Put(url.Values{"position": {position}}).Code
+}
+
+func (as *ActionSuite) Test_TasksIndex_OrdersByPosition() {
+	tasks := as.createTasks("Tarea alfa", "Tarea beta", "Tarea gamma")
+	as.NoError(models.MoveTask(as.DB, tasks[2].ID, 1))
+	as.assertListedInOrder("Tarea gamma", "Tarea alfa", "Tarea beta")
+}
+
+func (as *ActionSuite) Test_TasksIndex_RendersReorderControls() {
+	tasks := as.createTasks("Tarea alfa", "Tarea beta")
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	body := res.Body.String()
+
+	as.Contains(body, "data-task-list")
+	as.Contains(body, `data-task-id="`+tasks[0].ID.String()+`"`)
+	as.Contains(body, `action="/tasks/`+tasks[1].ID.String()+`/move"`)
+	as.Contains(body, `aria-label="Subir tarea: Tarea beta"`)
+	as.Contains(body, `aria-label="Bajar tarea: Tarea alfa"`)
+	as.Contains(body, `name="position" value="1"`)
+	as.Contains(body, `name="position" value="3"`)
+	as.Contains(body, "data-drag-handle")
+	as.Contains(body, `role="status" data-reorder-status`)
+}
+
+func (as *ActionSuite) Test_TasksMove_PersistsOrder() {
+	tasks := as.createTasks("Tarea alfa", "Tarea beta", "Tarea gamma")
+
+	res := as.HTML("/tasks/%s/move", tasks[0].ID).Put(url.Values{"position": {"3"}})
+	as.Equal(303, res.Code)
+	as.Equal("/", res.Header().Get("Location"))
+	as.assertListedInOrder("Tarea beta", "Tarea gamma", "Tarea alfa")
+
+	as.Equal(303, as.moveTask(tasks[2], "1"))
+	as.assertListedInOrder("Tarea gamma", "Tarea beta", "Tarea alfa")
+}
+
+func (as *ActionSuite) Test_TasksMove_OutOfRangeIsClamped() {
+	tasks := as.createTasks("Tarea alfa", "Tarea beta")
+
+	as.Equal(303, as.moveTask(tasks[0], "0"))
+	as.assertListedInOrder("Tarea alfa", "Tarea beta")
+
+	as.Equal(303, as.moveTask(tasks[1], "3"))
+	as.assertListedInOrder("Tarea alfa", "Tarea beta")
+}
+
+func (as *ActionSuite) Test_TasksMove_InvalidPosition() {
+	tasks := as.createTasks("Tarea alfa", "Tarea beta")
+
+	for _, position := range []string{"", "segunda", "1.5"} {
+		as.Equal(400, as.moveTask(tasks[1], position), position)
+	}
+	as.assertListedInOrder("Tarea alfa", "Tarea beta")
+}
+
+func (as *ActionSuite) Test_TasksMove_NotFound() {
+	res := as.HTML("/tasks/%s/move", uuid.Must(uuid.NewV4())).Put(url.Values{"position": {"1"}})
+	as.Equal(404, res.Code)
+}
+
+func (as *ActionSuite) Test_TasksMove_InvalidID() {
+	res := as.HTML("/tasks/no-es-un-uuid/move").Put(url.Values{"position": {"1"}})
+	as.Equal(404, res.Code)
+}
+
+func (as *ActionSuite) Test_TasksCreate_AppendsAtEndAfterMove() {
+	tasks := as.createTasks("Tarea alfa", "Tarea beta")
+	as.NoError(models.MoveTask(as.DB, tasks[1].ID, 1))
+
+	res := as.HTML("/tasks").Post(&models.Task{Title: "Tarea gamma"})
+	as.Equal(303, res.Code)
+	as.assertListedInOrder("Tarea beta", "Tarea alfa", "Tarea gamma")
+}
+
+func (as *ActionSuite) Test_TasksToggle_KeepsPosition() {
+	tasks := as.createTasks("Tarea alfa", "Tarea beta", "Tarea gamma")
+	as.NoError(models.MoveTask(as.DB, tasks[2].ID, 1))
+
+	for i := 0; i < 2; i++ {
+		res := as.HTML("/tasks/%s/toggle", tasks[0].ID).Put(url.Values{})
+		as.Equal(303, res.Code)
+		as.assertListedInOrder("Tarea gamma", "Tarea alfa", "Tarea beta")
+	}
+}
+
+func (as *ActionSuite) Test_TasksUpdate_KeepsPosition() {
+	tasks := as.createTasks("Tarea alfa", "Tarea beta")
+	as.NoError(models.MoveTask(as.DB, tasks[1].ID, 1))
+
+	res := as.HTML("/tasks/%s", tasks[1].ID).Put(url.Values{"title": {"Tarea beta editada"}})
+	as.Equal(303, res.Code)
+	as.assertListedInOrder("Tarea beta editada", "Tarea alfa")
+}
