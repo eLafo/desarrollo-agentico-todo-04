@@ -18,12 +18,20 @@ type Task struct {
 	ID        uuid.UUID `json:"id" db:"id" form:"-"`
 	Title     string    `json:"title" db:"title" form:"title"`
 	Completed bool      `json:"completed" db:"completed" form:"-"`
+	Urgent    *bool     `json:"urgent" db:"urgent" form:"-"`
+	Important *bool     `json:"important" db:"important" form:"-"`
 	CreatedAt time.Time `json:"created_at" db:"created_at" form:"-"`
 	UpdatedAt time.Time `json:"updated_at" db:"updated_at" form:"-"`
 }
 
 // Tasks es una colección de Task.
 type Tasks []Task
+
+// UrgentValue devuelve la urgencia como valor de formulario: "", "true" o "false".
+func (t Task) UrgentValue() string { return DimensionValue(t.Urgent) }
+
+// ImportantValue devuelve la importancia como valor de formulario: "", "true" o "false".
+func (t Task) ImportantValue() string { return DimensionValue(t.Important) }
 
 // Validate se ejecuta en cada llamada a los métodos "pop.Validate*".
 func (t *Task) Validate(tx *pop.Connection) (*validate.Errors, error) {

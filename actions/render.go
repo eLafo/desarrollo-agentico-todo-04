@@ -22,6 +22,8 @@ func init() {
 
 		// Add template helpers here:
 		Helpers: render.Helpers{
+			// assetURL enlaza un fichero de public/assets con la versión de su contenido.
+			"assetURL": assetURL,
 			// for non-bootstrap form helpers uncomment the lines
 			// below and import "github.com/gobuffalo/helpers/forms"
 			// forms.FormKey:     forms.Form,

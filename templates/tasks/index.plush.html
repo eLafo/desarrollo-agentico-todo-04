@@ -72,6 +72,7 @@
     >
     <button type="submit" class="button button-primary">Añadir</button>
   </div>
+  <%= partial("tasks/dimensions.plush.html") %>
   <%= if (errors.HasAny()) { %>
     <p id="title-error" class="field-error" role="alert">
       <%= for (msg) in errors.Get("title") { %><%= msg %><% } %>
