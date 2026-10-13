@@ -223,6 +223,30 @@ h1 {
   background: #fcf0ec;
 }
 
+.task-drag-handle {
+  width: 32px;
+  cursor: grab;
+  touch-action: none;
+  -webkit-touch-callout: none;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.task-list-dragging,
+.task-list-dragging .task-drag-handle {
+  cursor: grabbing;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.task-dragging {
+  position: relative;
+  z-index: 1;
+  border-radius: 6px;
+  background: #ffffff;
+  box-shadow: 0 6px 18px rgba(40, 40, 38, 0.14);
+}
+
 .new-task {
   margin-top: 0.75rem;
 }
@@ -399,7 +423,8 @@ input:focus-visible {
   }
 
   .task:hover .task-actions,
-  .task:focus-within .task-actions {
+  .task:focus-within .task-actions,
+  .task-dragging .task-actions {
     opacity: 1;
   }
 }
