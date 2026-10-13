@@ -10,9 +10,9 @@
   <%= if (len(tasks) == 0) { %>
     <p class="empty-state">No hay tareas todavía. Añade la primera con el formulario.</p>
   <% } else { %>
-    <ul class="task-list">
+    <ul class="task-list" data-task-list data-reorder-url="/tasks/order" data-csrf-token="<%= authenticity_token %>">
       <%= for (t) in tasks { %>
-        <li class="task<%= if (t.Completed) { %> task-completed<% } %>">
+        <li class="task<%= if (t.Completed) { %> task-completed<% } %>" data-task-id="<%= t.ID %>">
           <form action="/tasks/<%= t.ID %>/toggle" method="POST" class="task-toggle" data-task-toggle>
             <input type="hidden" name="authenticity_token" value="<%= authenticity_token %>">
             <input type="hidden" name="_method" value="PUT">
@@ -34,6 +34,18 @@
             <span class="task-status">Completada</span>
           <% } %>
           <div class="task-actions">
+            <span class="task-move-group">
+              <button type="button" class="icon-action task-move" data-move="up" aria-label="Subir tarea: <%= t.Title %>" title="Subir tarea">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 19V5M6 11l6-6 6 6" />
+                </svg>
+              </button>
+              <button type="button" class="icon-action task-move" data-move="down" aria-label="Bajar tarea: <%= t.Title %>" title="Bajar tarea">
+                <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+                  <path d="M12 5v14M6 13l6 6 6-6" />
+                </svg>
+              </button>
+            </span>
             <a href="/tasks/<%= t.ID %>/edit" class="icon-action" aria-label="Editar tarea: <%= t.Title %>" title="Editar tarea">
               <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
                 <path d="m15 5 4 4M4 20l4-1L20 7a2.8 2.8 0 0 0-4-4L4 15l-1 6Z" />
@@ -49,9 +61,20 @@
               </button>
             </form>
           </div>
+          <span class="task-handle" data-drag-handle aria-hidden="true" title="Arrastrar para reordenar">
+            <svg viewBox="0 0 24 24" fill="currentColor">
+              <circle cx="9" cy="6" r="1.5" />
+              <circle cx="15" cy="6" r="1.5" />
+              <circle cx="9" cy="12" r="1.5" />
+              <circle cx="15" cy="12" r="1.5" />
+              <circle cx="9" cy="18" r="1.5" />
+              <circle cx="15" cy="18" r="1.5" />
+            </svg>
+          </span>
         </li>
       <% } %>
     </ul>
+    <p class="sr-only" role="status" data-reorder-feedback></p>
   <% } %>
 </section>
 
