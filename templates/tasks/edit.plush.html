@@ -12,7 +12,6 @@
     type="text"
     name="title"
     value="<%= task.Title %>"
-    maxlength="200"
     autocomplete="off"
     autofocus
     <%= if (errors.HasAny()) { %>aria-invalid="true" aria-describedby="title-error"<% } else { %>aria-describedby="title-help"<% } %>

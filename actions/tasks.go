@@ -34,7 +34,7 @@ func TasksCreate(c buffalo.Context) error {
 	if err := c.Bind(task); err != nil {
 		return err
 	}
-	task.Title = strings.TrimSpace(task.Title)
+	task.Title = normalizeTitle(task.Title)
 
 	verrs, err := tx.ValidateAndCreate(task)
 	if err != nil {
@@ -86,7 +86,7 @@ func TasksUpdate(c buffalo.Context) error {
 	if err := c.Bind(&input); err != nil {
 		return err
 	}
-	task.Title = strings.TrimSpace(input.Title)
+	task.Title = normalizeTitle(input.Title)
 
 	verrs, err := tx.ValidateAndUpdate(task)
 	if err != nil {
@@ -134,4 +134,10 @@ func TasksDestroy(c buffalo.Context) error {
 
 	c.Flash().Add("success", "Tarea eliminada.")
 	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+// normalizeTitle quita los espacios del principio y del final del título y junta cada
+// grupo de espacios seguidos, tabuladores incluidos, en un solo espacio.
+func normalizeTitle(title string) string {
+	return strings.Join(strings.Fields(title), " ")
 }
