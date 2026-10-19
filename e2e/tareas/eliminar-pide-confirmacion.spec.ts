@@ -17,7 +17,7 @@ test.describe('Tareas', () => {
       await dialog.accept();
     });
     await eliminar.click();
-    await expect(page.getByRole('status')).toHaveText('Tarea eliminada.');
+    await expect(page.getByRole('status')).toHaveText('Tarea eliminada: Enviar la factura.');
     await expect(page.locator('.task-title')).toHaveText(['Revisar el presupuesto']);
   });
 });
