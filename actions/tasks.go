@@ -132,6 +132,10 @@ func TasksDestroy(c buffalo.Context) error {
 		return err
 	}
 
-    c.Flash().Add("success", "Tarea eliminada: "+task.Title+".")
+	msg := "Tarea eliminada: " + task.Title
+	if !strings.HasSuffix(task.Title, ".") {
+		msg += "."
+	}
+	c.Flash().Add("success", msg)
 	return c.Redirect(http.StatusSeeOther, "/")
 }

@@ -23,3 +23,8 @@ Entre tres y cinco condiciones por documento, y las entradas en orden por númer
   - Cuando se cambie la protección CSRF o los campos que envía el formulario de una tarea
   - Cuando se investigue una tarea que cambia en pantalla pero vuelve a su estado al recargar
   - Cuando se escriban tests de navegador en `e2e/tareas/` que dependan de recargar la página
+- [feature-20-decir-que-tarea-se-ha-eliminado.md](feature-20-decir-que-tarea-se-ha-eliminado.md): el aviso al eliminar una tarea dice cuál («Tarea eliminada: Comprar pan.») y no repite el punto si el título ya acaba en «.»
+  - Cuando se trabaje con `TasksDestroy` en `actions/tasks.go` o con el aviso que sale al eliminar una tarea
+  - Cuando se modifique la plantilla del flash (`flash.plush.html`) o los estilos de `.flash`, por el escapado del título y el desbordamiento de títulos largos
+  - Cuando se cambien los textos de los avisos de crear, actualizar o eliminar una tarea
+  - Cuando se escriban tests de navegador en `e2e/tareas/` que comprueben el texto de un aviso

@@ -5,18 +5,23 @@ const largo = 'Revisar <factura> & presupuesto '.repeat(6) + 'de enero';
 
 test.describe('Tareas', () => {
   test('el aviso de eliminar dice qué tarea', async ({ page, tasks }) => {
-    await tasks([{ title: 'Comprar pan' }, { title: largo }, { title: 'Llamar al gestor' }]);
+    await tasks([{ title: 'Comprar pan' }, { title: largo }, { title: 'Llamar a Juan.' }, { title: 'Llamar al gestor' }]);
     await page.reload();
     page.on('dialog', (dialog) => dialog.accept());
 
     // 1. Elimina «Comprar pan»: el aviso dice cuál
     await page.getByRole('button', { name: 'Eliminar tarea: Comprar pan' }).click();
     await expect(page.getByRole('status')).toHaveText('Tarea eliminada: Comprar pan.');
-    await expect(page.locator('.task-title')).toHaveText([largo, 'Llamar al gestor']);
+    await expect(page.locator('.task-title')).toHaveText([largo, 'Llamar a Juan.', 'Llamar al gestor']);
 
     // 2. Elimina la del título largo: el aviso lo muestra entero, con < y & como texto
     await page.getByRole('button', { name: `Eliminar tarea: ${largo}` }).click();
     await expect(page.getByRole('status')).toHaveText(`Tarea eliminada: ${largo}.`);
+    await expect(page.locator('.task-title')).toHaveText(['Llamar a Juan.', 'Llamar al gestor']);
+
+    // 3. Elimina «Llamar a Juan.», que ya acaba en punto: el aviso no añade otro
+    await page.getByRole('button', { name: 'Eliminar tarea: Llamar a Juan.' }).click();
+    await expect(page.getByRole('status')).toHaveText('Tarea eliminada: Llamar a Juan.');
     await expect(page.locator('.task-title')).toHaveText(['Llamar al gestor']);
   });
 });
