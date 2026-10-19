@@ -16,3 +16,10 @@ Este índice es condicional: cada entrada dice cuándo conviene cargar su docume
 Entre tres y cinco condiciones por documento, y las entradas en orden por número de issue. Si un documento ya tiene entrada, se actualizan sus condiciones en lugar de añadir otra.
 
 ## Índice
+
+- [bug-15-al-completar-una-tarea-al-recargar-vuelve-a-estar-pendiente.md](bug-15-al-completar-una-tarea-al-recargar-vuelve-a-estar-pendiente.md): el JavaScript guarda con un POST el completar y reabrir una tarea, que antes se perdía al recargar
+  - Cuando se trabaje con `public/assets/app.js` o con la versión del script (`?v=`) en `templates/application.plush.html`
+  - Cuando se modifique la ruta `/tasks/{id}/toggle`, su método HTTP o el formulario de completar y reabrir
+  - Cuando se cambie la protección CSRF o los campos que envía el formulario de una tarea
+  - Cuando se investigue una tarea que cambia en pantalla pero vuelve a su estado al recargar
+  - Cuando se escriban tests de navegador en `e2e/tareas/` que dependan de recargar la página
