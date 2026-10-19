@@ -23,9 +23,9 @@ Entre tres y cinco condiciones por documento, y las entradas en orden por númer
   - Cuando se cambie la protección CSRF o los campos que envía el formulario de una tarea
   - Cuando se investigue una tarea que cambia en pantalla pero vuelve a su estado al recargar
   - Cuando se escriban tests de navegador en `e2e/tareas/` que dependan de recargar la página
-- [feature-14-mostrar-cuantas-tareas-quedan-pendientes.md](feature-14-mostrar-cuantas-tareas-quedan-pendientes.md): la cabecera de la lista dice «X pendientes de N tareas» y se actualiza al completar o reabrir sin recargar
-  - Cuando se trabaje con la cabecera de `templates/tasks/index.plush.html`, la clase `.list-count` o el texto del recuento
-  - Cuando se modifique `Tasks.Pending` en `models/task.go` o `listCount` en `actions/tasks.go`
-  - Cuando se cambie `public/assets/app.js` y lo que hace tras guardar al completar o reabrir (copia el texto de la respuesta)
+- [feature-14-mostrar-cuantas-tareas-quedan-pendientes.md](feature-14-mostrar-cuantas-tareas-quedan-pendientes.md): la cabecera de la lista, titulada «Mis tareas», dice «**X** pendientes de N tareas» con el número en negrita y se actualiza al completar o reabrir sin recargar
+  - Cuando se trabaje con la cabecera de `templates/tasks/index.plush.html` (el `<h1>` «Mis tareas», el `<strong>` del número) o la clase `.list-count`
+  - Cuando se modifique `Tasks.Pending` en `models/task.go`, o `listCountSuffix` y la variable `pendingCount` en `actions/tasks.go`
+  - Cuando se cambie `public/assets/app.js` tras guardar al completar o reabrir (sustituye el párrafo `.list-count` por el de la respuesta del servidor con `replaceWith`, no copia su texto)
   - Cuando se añadan o cambien acciones de tareas (crear, eliminar, alternar) que alteren el total o las pendientes
-  - Cuando se escriban tests de navegador que comprueben el texto de la lista, como `e2e/tareas/pendientes-al-completar-y-reabrir.spec.ts`
+  - Cuando se escriban tests de navegador que comprueben el texto o la negrita de la lista, como `e2e/tareas/pendientes-al-completar-y-reabrir.spec.ts` o `pendientes-en-negrita.spec.ts`

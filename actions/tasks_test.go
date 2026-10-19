@@ -256,7 +256,7 @@ func (as *ActionSuite) Test_TasksIndex_ListCount() {
 	as.Equal(200, res.Code)
 
 	body := res.Body.String()
-	as.Contains(body, `<p class="list-count">2 pendientes de 3 tareas</p>`)
+	as.Contains(body, `<p class="list-count"><strong>2</strong> pendientes de 3 tareas</p>`)
 	as.NotContains(body, "en tu lista")
 }
 
@@ -265,7 +265,7 @@ func (as *ActionSuite) Test_TasksIndex_ListCount_Singular() {
 
 	res := as.HTML("/").Get()
 	as.Equal(200, res.Code)
-	as.Contains(res.Body.String(), `<p class="list-count">1 pendiente de 1 tarea</p>`)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>1</strong> pendiente de 1 tarea</p>`)
 }
 
 func (as *ActionSuite) Test_TasksIndex_ListCount_OnePendingOfSeveral() {
@@ -273,7 +273,7 @@ func (as *ActionSuite) Test_TasksIndex_ListCount_OnePendingOfSeveral() {
 
 	res := as.HTML("/").Get()
 	as.Equal(200, res.Code)
-	as.Contains(res.Body.String(), `<p class="list-count">1 pendiente de 3 tareas</p>`)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>1</strong> pendiente de 3 tareas</p>`)
 }
 
 func (as *ActionSuite) Test_TasksIndex_ListCount_NonePendingOfOne() {
@@ -281,7 +281,7 @@ func (as *ActionSuite) Test_TasksIndex_ListCount_NonePendingOfOne() {
 
 	res := as.HTML("/").Get()
 	as.Equal(200, res.Code)
-	as.Contains(res.Body.String(), `<p class="list-count">0 pendientes de 1 tarea</p>`)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>0</strong> pendientes de 1 tarea</p>`)
 }
 
 func (as *ActionSuite) Test_TasksIndex_ListCount_AllCompleted() {
@@ -289,7 +289,7 @@ func (as *ActionSuite) Test_TasksIndex_ListCount_AllCompleted() {
 
 	res := as.HTML("/").Get()
 	as.Equal(200, res.Code)
-	as.Contains(res.Body.String(), `<p class="list-count">0 pendientes de 3 tareas</p>`)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>0</strong> pendientes de 3 tareas</p>`)
 }
 
 func (as *ActionSuite) Test_TasksIndex_EmptyState_HidesListCount() {
@@ -310,7 +310,7 @@ func (as *ActionSuite) Test_TasksCreate_CountsAsPending() {
 
 	res = as.HTML("/").Get()
 	as.Equal(200, res.Code)
-	as.Contains(res.Body.String(), `<p class="list-count">3 pendientes de 4 tareas</p>`)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>3</strong> pendientes de 4 tareas</p>`)
 }
 
 func (as *ActionSuite) Test_TasksCreate_Invalid_KeepsListCount() {
@@ -321,7 +321,7 @@ func (as *ActionSuite) Test_TasksCreate_Invalid_KeepsListCount() {
 
 	body := res.Body.String()
 	as.Contains(body, "El título es obligatorio.")
-	as.Contains(body, `<p class="list-count">2 pendientes de 3 tareas</p>`)
+	as.Contains(body, `<p class="list-count"><strong>2</strong> pendientes de 3 tareas</p>`)
 }
 
 func (as *ActionSuite) Test_TasksToggle_UpdatesListCount() {
@@ -332,12 +332,12 @@ func (as *ActionSuite) Test_TasksToggle_UpdatesListCount() {
 	res := as.HTML("/tasks/%s/toggle", task.ID).Put(url.Values{})
 	as.Equal(303, res.Code)
 	res = as.HTML("/").Get()
-	as.Contains(res.Body.String(), `<p class="list-count">1 pendiente de 3 tareas</p>`)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>1</strong> pendiente de 3 tareas</p>`)
 
 	res = as.HTML("/tasks/%s/toggle", task.ID).Put(url.Values{})
 	as.Equal(303, res.Code)
 	res = as.HTML("/").Get()
-	as.Contains(res.Body.String(), `<p class="list-count">2 pendientes de 3 tareas</p>`)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>2</strong> pendientes de 3 tareas</p>`)
 }
 
 func (as *ActionSuite) Test_TasksDestroy_DiscountsTask() {
@@ -349,7 +349,7 @@ func (as *ActionSuite) Test_TasksDestroy_DiscountsTask() {
 	as.Equal(303, res.Code)
 
 	res = as.HTML("/").Get()
-	as.Contains(res.Body.String(), `<p class="list-count">1 pendiente de 2 tareas</p>`)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>1</strong> pendiente de 2 tareas</p>`)
 }
 
 func (as *ActionSuite) Test_TasksDestroy_LastTask_HidesListCount() {
@@ -364,4 +364,10 @@ func (as *ActionSuite) Test_TasksDestroy_LastTask_HidesListCount() {
 	body := res.Body.String()
 	as.Contains(body, "No hay tareas todavía")
 	as.NotContains(body, "list-count")
+}
+
+func (as *ActionSuite) Test_TasksIndex_Heading() {
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), "<h1>Mis tareas</h1>")
 }

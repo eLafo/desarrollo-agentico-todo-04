@@ -14,7 +14,7 @@ import (
 
 // TasksIndex muestra la lista de tareas y el formulario de creación.
 func TasksIndex(c buffalo.Context) error {
-    tx := c.Value("tx").(*pop.Connection)
+	tx := c.Value("tx").(*pop.Connection)
 
 	tasks := models.Tasks{}
 	if err := tx.Order("created_at asc, id asc").All(&tasks); err != nil {
@@ -22,7 +22,8 @@ func TasksIndex(c buffalo.Context) error {
 	}
 
 	c.Set("tasks", tasks)
-	c.Set("listCount", listCount(tasks))
+	c.Set("pendingCount", tasks.Pending())
+	c.Set("listCountSuffix", listCountSuffix(tasks))
 	c.Set("task", &models.Task{})
 	c.Set("errors", validate.NewErrors())
 	return c.Render(http.StatusOK, r.HTML("tasks/index.plush.html"))
@@ -50,7 +51,8 @@ func TasksCreate(c buffalo.Context) error {
 		}
 
 		c.Set("tasks", tasks)
-		c.Set("listCount", listCount(tasks))
+		c.Set("pendingCount", tasks.Pending())
+		c.Set("listCountSuffix", listCountSuffix(tasks))
 		c.Set("task", task)
 		c.Set("errors", verrs)
 		return c.Render(http.StatusUnprocessableEntity, r.HTML("tasks/index.plush.html"))
@@ -139,17 +141,17 @@ func TasksDestroy(c buffalo.Context) error {
 	return c.Redirect(http.StatusSeeOther, "/")
 }
 
-// listCount compone el texto de la cabecera de la lista, como «2 pendientes de 3 tareas»,
-// con el singular y el plural de cada parte por separado.
-func listCount(tasks models.Tasks) string {
-	pending := tasks.Pending()
+// listCountSuffix compone el texto que sigue al número de pendientes en la cabecera de la
+// lista, como «pendientes de 3 tareas» en «2 pendientes de 3 tareas», con el singular y el
+// plural de cada parte por separado.
+func listCountSuffix(tasks models.Tasks) string {
 	pendingWord := "pendientes"
-	if pending == 1 {
+	if tasks.Pending() == 1 {
 		pendingWord = "pendiente"
 	}
 	taskWord := "tareas"
 	if len(tasks) == 1 {
 		taskWord = "tarea"
 	}
-	return fmt.Sprintf("%d %s de %d %s", pending, pendingWord, len(tasks), taskWord)
+	return fmt.Sprintf("%s de %d %s", pendingWord, len(tasks), taskWord)
 }

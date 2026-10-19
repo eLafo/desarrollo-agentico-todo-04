@@ -1,7 +1,7 @@
 <header class="page-header">
   <h1>Mis tareas</h1>
   <%= if (len(tasks) > 0) { %>
-    <p class="list-count"><%= listCount %></p>
+    <p class="list-count"><strong><%= pendingCount %></strong> <%= listCountSuffix %></p>
   <% } %>
 </header>
 
