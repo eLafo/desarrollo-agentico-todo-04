@@ -14,7 +14,7 @@ import (
 
 // TasksIndex muestra la lista de tareas y el formulario de creación.
 func TasksIndex(c buffalo.Context) error {
-	tx := c.Value("tx").(*pop.Connection)
+    tx := c.Value("tx").(*pop.Connection)
 
 	tasks := models.Tasks{}
 	if err := tx.Order("created_at asc, id asc").All(&tasks); err != nil {
