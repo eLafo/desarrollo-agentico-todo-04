@@ -109,6 +109,54 @@ func (as *ActionSuite) Test_TasksDestroy_NotFound() {
 	as.Equal(404, res.Code)
 }
 
+func (as *ActionSuite) Test_TasksDestroy_FlashNamesTask() {
+	task := &models.Task{Title: "Comprar pan"}
+	verrs, err := as.DB.ValidateAndCreate(task)
+	as.NoError(err)
+	as.False(verrs.HasAny())
+
+	res := as.HTML("/tasks/%s", task.ID).Delete()
+	as.Equal(303, res.Code)
+
+	res = as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), "Tarea eliminada: Comprar pan.")
+}
+
+func (as *ActionSuite) Test_TasksDestroy_FlashShowsFullTitleAsText() {
+	prefix := "Revisar <factura> & presupuesto "
+	rest := strings.Repeat("á", models.TitleMaxLength-len([]rune(prefix)))
+	task := &models.Task{Title: prefix + rest}
+	verrs, err := as.DB.ValidateAndCreate(task)
+	as.NoError(err)
+	as.False(verrs.HasAny())
+
+	res := as.HTML("/tasks/%s", task.ID).Delete()
+	as.Equal(303, res.Code)
+
+	res = as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	body := res.Body.String()
+	as.Contains(body, "Tarea eliminada: Revisar &lt;factura&gt; &amp; presupuesto "+rest+".")
+	as.NotContains(body, "<factura>")
+}
+
+func (as *ActionSuite) Test_TasksDestroy_FlashDoesNotRepeatPeriod() {
+	task := &models.Task{Title: "Llamar a Juan."}
+	verrs, err := as.DB.ValidateAndCreate(task)
+	as.NoError(err)
+	as.False(verrs.HasAny())
+
+	res := as.HTML("/tasks/%s", task.ID).Delete()
+	as.Equal(303, res.Code)
+
+	res = as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	body := res.Body.String()
+	as.Contains(body, "Tarea eliminada: Llamar a Juan.")
+	as.NotContains(body, "Llamar a Juan..")
+}
+
 func (as *ActionSuite) taskForEditing(completed bool) *models.Task {
 	task := &models.Task{Title: "Título original", Completed: completed}
 	verrs, err := as.DB.ValidateAndCreate(task)
