@@ -32,9 +32,21 @@ document.addEventListener("submit", function (event) {
   }
 
   // Guarda el cambio con la misma petición que el formulario: POST con el token CSRF
-  // y _method=PUT, que Buffalo convierte en PUT /tasks/{id}/toggle.
+  // y _method=PUT, que Buffalo convierte en PUT /tasks/{id}/toggle. La acción redirige a
+  // la lista y fetch sigue la redirección: de esa página se copia el texto de pendientes
+  // de la cabecera, que calcula el servidor con el cambio ya guardado.
   fetch(form.action, {
     method: "POST",
     body: new URLSearchParams(new FormData(form)),
-  });
+  })
+    .then(function (response) {
+      return response.ok ? response.text() : "";
+    })
+    .then(function (html) {
+      var current = document.querySelector(".list-count");
+      var saved = new DOMParser().parseFromString(html, "text/html").querySelector(".list-count");
+      if (current && saved) {
+        current.textContent = saved.textContent;
+      }
+    });
 });

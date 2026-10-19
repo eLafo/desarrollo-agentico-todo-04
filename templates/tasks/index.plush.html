@@ -1,8 +1,8 @@
 <header class="page-header">
   <h1>Tareas</h1>
-  <p class="list-count">
-    <%= len(tasks) %> <%= if (len(tasks) == 1) { %>tarea en tu lista<% } else { %>tareas en tu lista<% } %>
-  </p>
+  <%= if (len(tasks) > 0) { %>
+    <p class="list-count"><%= listCount %></p>
+  <% } %>
 </header>
 
 <section aria-labelledby="list-heading">

@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -21,6 +22,7 @@ func TasksIndex(c buffalo.Context) error {
 	}
 
 	c.Set("tasks", tasks)
+	c.Set("listCount", listCount(tasks))
 	c.Set("task", &models.Task{})
 	c.Set("errors", validate.NewErrors())
 	return c.Render(http.StatusOK, r.HTML("tasks/index.plush.html"))
@@ -48,6 +50,7 @@ func TasksCreate(c buffalo.Context) error {
 		}
 
 		c.Set("tasks", tasks)
+		c.Set("listCount", listCount(tasks))
 		c.Set("task", task)
 		c.Set("errors", verrs)
 		return c.Render(http.StatusUnprocessableEntity, r.HTML("tasks/index.plush.html"))
@@ -134,4 +137,19 @@ func TasksDestroy(c buffalo.Context) error {
 
 	c.Flash().Add("success", "Tarea eliminada.")
 	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+// listCount compone el texto de la cabecera de la lista, como «2 pendientes de 3 tareas»,
+// con el singular y el plural de cada parte por separado.
+func listCount(tasks models.Tasks) string {
+	pending := tasks.Pending()
+	pendingWord := "pendientes"
+	if pending == 1 {
+		pendingWord = "pendiente"
+	}
+	taskWord := "tareas"
+	if len(tasks) == 1 {
+		taskWord = "tarea"
+	}
+	return fmt.Sprintf("%d %s de %d %s", pending, pendingWord, len(tasks), taskWord)
 }
