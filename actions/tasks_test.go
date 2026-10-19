@@ -59,6 +59,45 @@ func (as *ActionSuite) Test_TasksCreate_OnlySpaces_Invalid() {
 	as.Equal(0, count)
 }
 
+func (as *ActionSuite) Test_TasksCreate_CollapsesSpaces() {
+	res := as.HTML("/tasks").Post(&models.Task{Title: "  Comprar    pan  "})
+	as.Equal(303, res.Code)
+
+	task := &models.Task{}
+	as.NoError(as.DB.First(task))
+	as.Equal("Comprar pan", task.Title)
+}
+
+func (as *ActionSuite) Test_TasksCreate_CollapsesTabs() {
+	res := as.HTML("/tasks").Post(&models.Task{Title: "Comprar\tpan"})
+	as.Equal(303, res.Code)
+
+	task := &models.Task{}
+	as.NoError(as.DB.First(task))
+	as.Equal("Comprar pan", task.Title)
+}
+
+func (as *ActionSuite) Test_TasksCreate_TitleOverLimitOnlyBySpaces() {
+	joined := "Comprar pan " + strings.Repeat("x", models.TitleMaxLength-len("Comprar pan "))
+	res := as.HTML("/tasks").Post(&models.Task{Title: strings.Replace(joined, " ", "    ", 1)})
+	as.Equal(303, res.Code)
+
+	task := &models.Task{}
+	as.NoError(as.DB.First(task))
+	as.Equal(joined, task.Title)
+}
+
+func (as *ActionSuite) Test_TasksCreate_TitleTooLongAfterCollapsing() {
+	joined := "Comprar pan " + strings.Repeat("x", models.TitleMaxLength-len("Comprar pan ")+1)
+	res := as.HTML("/tasks").Post(&models.Task{Title: strings.Replace(joined, " ", "    ", 1)})
+	as.Equal(422, res.Code)
+	as.Contains(res.Body.String(), "El título no puede superar los 200 caracteres.")
+
+	count, err := as.DB.Count(&models.Task{})
+	as.NoError(err)
+	as.Equal(0, count)
+}
+
 func (as *ActionSuite) Test_TasksToggle_CompletesAndReopens() {
 	task := &models.Task{Title: "Pendiente de completar"}
 	verrs, err := as.DB.ValidateAndCreate(task)
@@ -159,6 +198,19 @@ func (as *ActionSuite) Test_TasksEdit_EscapesTitle() {
 	as.Contains(res.Body.String(), "&lt;img")
 }
 
+func (as *ActionSuite) Test_TasksEdit_KeepsRepeatedSpaces() {
+	task := &models.Task{Title: "Comprar    pan"}
+	verrs, err := as.DB.ValidateAndCreate(task)
+	as.NoError(err)
+	as.False(verrs.HasAny())
+
+	res := as.HTML("/tasks/%s/edit", task.ID).Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), `value="Comprar    pan"`)
+	as.NoError(as.DB.Reload(task))
+	as.Equal("Comprar    pan", task.Title)
+}
+
 func (as *ActionSuite) Test_TasksUpdate_PersistsTitleOnly() {
 	task := as.taskForEditing(true)
 	id, createdAt, updatedAt := task.ID, task.CreatedAt, task.UpdatedAt
@@ -226,6 +278,23 @@ func (as *ActionSuite) Test_TasksUpdate_TitleAtLimit() {
 	as.Equal(303, res.Code)
 	as.NoError(as.DB.Reload(task))
 	as.Equal(title, task.Title)
+}
+
+func (as *ActionSuite) Test_TasksUpdate_CollapsesSpaces() {
+	task := as.taskForEditing(false)
+	res := as.HTML("/tasks/%s", task.ID).Put(url.Values{"title": {"  Comprar    pan\t\ty  leche  "}})
+	as.Equal(303, res.Code)
+	as.NoError(as.DB.Reload(task))
+	as.Equal("Comprar pan y leche", task.Title)
+}
+
+func (as *ActionSuite) Test_TasksUpdate_TitleOverLimitOnlyBySpaces() {
+	task := as.taskForEditing(false)
+	joined := "Comprar pan " + strings.Repeat("x", models.TitleMaxLength-len("Comprar pan "))
+	res := as.HTML("/tasks/%s", task.ID).Put(url.Values{"title": {strings.Replace(joined, " ", "    ", 1)}})
+	as.Equal(303, res.Code)
+	as.NoError(as.DB.Reload(task))
+	as.Equal(joined, task.Title)
 }
 
 func (as *ActionSuite) Test_TasksUpdate_NotFound() {

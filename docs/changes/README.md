@@ -23,3 +23,8 @@ Entre tres y cinco condiciones por documento, y las entradas en orden por númer
   - Cuando se cambie la protección CSRF o los campos que envía el formulario de una tarea
   - Cuando se investigue una tarea que cambia en pantalla pero vuelve a su estado al recargar
   - Cuando se escriban tests de navegador en `e2e/tareas/` que dependan de recargar la página
+- [feature-18-juntar-los-espacios-repetidos-del-titulo.md](feature-18-juntar-los-espacios-repetidos-del-titulo.md): el título de una tarea se guarda con los espacios y tabuladores repetidos juntos en uno, y el límite de 200 se mide después
+  - Cuando se trabaje con `actions/tasks.go`, `TasksCreate`, `TasksUpdate` o `normalizeTitle`
+  - Cuando se modifique el límite de 200 caracteres del título o el `maxlength` de los campos en `templates/tasks/index.plush.html` y `templates/tasks/edit.plush.html`
+  - Cuando se añada otra vía que escriba `Task.Title` (importación, API, script) y deba normalizarlo
+  - Cuando se investigue un título guardado con espacios repetidos, o uno rechazado por largo que parecía caber
