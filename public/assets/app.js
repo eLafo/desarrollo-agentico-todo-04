@@ -31,5 +31,10 @@ document.addEventListener("submit", function (event) {
     status.remove();
   }
 
-  fetch(form.action);
+  // Guarda el cambio con la misma petición que el formulario: POST con el token CSRF
+  // y _method=PUT, que Buffalo convierte en PUT /tasks/{id}/toggle.
+  fetch(form.action, {
+    method: "POST",
+    body: new URLSearchParams(new FormData(form)),
+  });
 });
