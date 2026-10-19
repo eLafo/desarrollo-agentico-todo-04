@@ -105,6 +105,7 @@ cat "$TEST_ROOT/issues"
 set -euo pipefail
 [[ $# == 4 && "$1" == -p && "$3" == --permission-prompts && "$4" == none ]] || exit 90
 if IFS= read -r unexpected; then exit 91; fi
+[[ "${CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS:-}" == 0 ]] || exit 92
 printf 'START:%s\n' "$2" >> "$TEST_ROOT/events"
 printf '%s' "$PWD" > "$TEST_ROOT/cwd"
 [[ "${TEST_CLAUDE_EXIT:-0}" == 0 ]] || exit "$TEST_CLAUDE_EXIT"
@@ -172,6 +173,17 @@ func TestTriggerOnceRunsIssuesInSequence(t *testing.T) {
 	want := "START:/adw " + newSnapshot + "\nEND:/adw " + newSnapshot + "\nSTART:/adw " + oldSnapshot + "\nEND:/adw " + oldSnapshot + "\n"
 	if events != want {
 		t.Fatalf("want sequential invocations %q, got %q", want, events)
+	}
+}
+
+func TestTriggerWaitsForBackgroundAgentsWithoutCeiling(t *testing.T) {
+	env := []string{"CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=600000"}
+	output, events, _, err := runTrigger(t, list(newSnapshot), "", env, "--once")
+	if err != nil {
+		t.Fatalf("claude must run with CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0, even if the environment sets another value: %v: %s", err, output)
+	}
+	if want := "START:/adw " + newSnapshot + "\nEND:/adw " + newSnapshot + "\n"; events != want {
+		t.Fatalf("want %q, got %q", want, events)
 	}
 }
 

@@ -157,6 +157,9 @@ func run(args []string) error {
 			prompt := strings.ReplaceAll(cfg.Prompt, "{{payload}}", payload.String())
 			fmt.Printf("\nLanzando %s\n", it.URL)
 			agent := exec.Command("claude", "-p", prompt, "--permission-prompts", "none")
+			// Sin tope de espera a los subagentes en segundo plano: si el coordinador termina su turno
+			// mientras uno trabaja, claude -p corta la sesión a los 10 minutos y deja el caso a medias.
+			agent.Env = append(os.Environ(), "CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS=0")
 			agent.Stdout, agent.Stderr = os.Stdout, os.Stderr
 			// Stdin queda cerrado: no hay conversación ni evaluación de shell.
 			if err := agent.Run(); err != nil {
