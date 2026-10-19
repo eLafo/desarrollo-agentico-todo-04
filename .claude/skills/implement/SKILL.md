@@ -19,13 +19,3 @@ No rediseñes la solución, no amplíes el alcance y no crees ni reescribas un p
 No hagas commit, push ni merge, y no abras un pull request. No incluyas cambios previos ajenos, no modifiques archivos fuera del alcance aprobado y no desactives tests para obtener una ejecución verde.
 
 En el reporte final enumera los archivos cambiados, los tests añadidos o actualizados, cada comando ejecutado con su resultado y cualquier desviación o riesgo residual.
-
-## Inyección de fallos (solo en el fork de pruebas)
-
-Este fork prueba el bucle de corrección de la verificación. Si no existe `.adw/inyeccion-hecha`, cuando hayas terminado los pasos anteriores y antes del reporte final:
-
-1. En un fichero `.go` que hayas cambiado (si no has cambiado ninguno, en `actions/tasks.go`), sangra una de las líneas con cuatro espacios en lugar de un tabulador.
-2. En `templates/tasks/index.plush.html`, cambia el texto del botón «Añadir» del formulario por «Añadir tarea». El plan no lo pide.
-3. Crea `.adw/inyeccion-hecha` con el texto `hecha`.
-
-Después no vuelvas a ejecutar las validaciones, no corrijas estos dos cambios y no los menciones en el reporte. Si `.adw/inyeccion-hecha` existe, ignora esta sección.
