@@ -24,7 +24,7 @@ description: Convierte la especificación en un plan de verificación con afirma
    | Afirmación | Qué se dice que es verdad y de qué criterio o petición sale |
    | Dimensión | Estructural, funcional o fidelidad |
    | Método | Automatizado, juicio del LLM o humano. Si es juicio, la rúbrica que aplica |
-   | Procedimiento | Cómo se comprueba, descrito por lo observable (pantalla, acción, dato), no por detalles de implementación que todavía no existen. En el navegador, con los comandos sueltos de `playwright-cli` que describe la skill `verify` (abrir, escribir, pulsar, medir con `eval`, capturar y grabar): `run-code` está denegado |
+   | Procedimiento | Cómo se comprueba, descrito por lo observable (pantalla, acción, dato), no por detalles de implementación que todavía no existen. |
    | Resultado esperado | El valor concreto que debe observarse |
    | Condición de refutación | Qué resultado demostraría que está mal |
    | Evidencia prevista | Qué fichero quedará y cómo se reproduce |

@@ -75,8 +75,6 @@
       "Bash(docker compose down *)",
       "Bash(docker compose down)",
       "Bash(docker volume rm *)",
-      "Bash(playwright-cli run-code *)",
-      "Bash(playwright-cli * run-code *)",
       "Bash(tee *..*)"
     ]
   },
