@@ -12,7 +12,7 @@ Un test trae su propia prueba: el código es la referencia y el resultado se rep
 
 ### Entradas
 
-- La afirmación que se juzga y su rúbrica, por su identificador en `docs/conventions.md` (`E1`, `F1`, `D1`…).
+- La afirmación que se juzga y su rúbrica, por su identificador en `docs/procedures/conventions.md` (`E1`, `F1`, `D1`…).
 - El material, ya extraído: los fragmentos del diff con fichero y línea, las cadenas nuevas, la traza de un fragmento a un criterio. Si te pasan el diff entero, extrae tú lo que la rúbrica dice que juzga.
 - El fichero donde escribir el acta del juicio, dentro de `.adw/`.
 
@@ -37,7 +37,7 @@ No recibes la justificación del implementador ni el razonamiento de otros juece
 - **Razonamiento:** …
 - **Veredicto:** cumple | nit | should-fix | blocker
 - **Confianza:** alta | baja — por qué
-- **Procedencia:** rúbrica <id> de `docs/conventions.md` · modelo <modelo> · material <rango del diff o ficheros>
+- **Procedencia:** rúbrica <id> de `docs/procedures/conventions.md` · modelo <modelo> · material <rango del diff o ficheros>
 ```
 
 Un bloque por criterio y por fragmento juzgado. Al final, la lista de hallazgos (`nit`, `should-fix`, `blocker`) y las observaciones fuera de rúbrica.

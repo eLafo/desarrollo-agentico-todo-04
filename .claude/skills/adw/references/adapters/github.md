@@ -13,7 +13,7 @@ La definición dice qué artefactos hay, cómo evolucionan y qué servicios exis
 | Verification · plan | Comentarios en la issue que empiezan por `<!-- adw:verification-plan -->`, uno por revisión. El vigente es el más reciente | La URL del comentario |
 | Verification · acta | Comentarios en la issue que empiezan por `<!-- adw:evidence -->`, uno por intento, con sus capturas y vídeos adjuntos. La vigente es la más reciente | La URL del comentario |
 | Verification · ficheros | `.adw/evidence/issue-N/<n>/` en la copia de trabajo local, donde `<n>` es el número del acta en la issue (1 la primera, y así sucesivamente aunque el contador de rechazos vuelva a cero). Los ficheros se numeran `01_<afirmación>-<detalle>.<ext>`, como `02_a1-contador.png`; los registros de los gates se llaman `gate-<gate>.txt` | La ruta |
-| Documentation | `docs/changes/<tipo>-<N>-<slug>.md`, con el slug de la rama, y su entrada en `docs/changes/README.md`, en la rama del caso | La ruta |
+| Documentation | `docs/history/changes/<tipo>-<N>-<slug>.md`, con el slug de la rama, y su entrada en `docs/history/changes/README.md`; si el humano respondió preguntas con opciones, `docs/history/decisions/<tipo>-<N>-<slug>.md` y su entrada en `docs/history/decisions/README.md`. En la rama del caso | La ruta del documento de cierre |
 
 Para ir del PR a su issue: `gh pr view <URL> --json closingIssuesReferences`. Para ir de la issue a su PR: lee la rama en el comentario de control y usa `gh pr list --repo OWNER/REPO --head <rama> --state all`.
 
@@ -84,10 +84,10 @@ Nunca se ocultan el comentario de control, las preguntas y decisiones de `clarif
 - **`change:published`:** el PR existe, no está en borrador (`gh pr view <URL> --json isDraft,headRefOid,body`), contiene la cabeza de la rama y su descripción dice «validada en» ese commit, con el enlace al acta vigente.
 
 - **`verification:planned`:** hay un plan de verificación posterior a la última vez que la Issue perdió `clarified` y que recoge todas las peticiones de cambio del humano. Una petición posterior a él lo invalida.
-- **Acta vigente:** la última `adw:evidence`. Su veredicto da `validated` o `rejected`, que valen mientras el Change conserve `implemented`. `publish` ata el acta al commit que crea, y la descripción del PR dice «validada en `<sha>`». La evidencia sigue valiendo mientras ese commit sea la cabeza del PR. Los ficheros de `docs/changes/` no la invalidan.
+- **Acta vigente:** la última `adw:evidence`. Su veredicto da `validated` o `rejected`, que valen mientras el Change conserve `implemented`. `publish` ata el acta al commit que crea, y la descripción del PR dice «validada en `<sha>`». La evidencia sigue valiendo mientras ese commit sea la cabeza del PR. Los ficheros del caso en `docs/history/` no la invalidan.
 - **Rechazos seguidos:** las actas con veredicto «rechazado» posteriores a la última intervención humana, que es lo más reciente entre el último comentario humano en la issue o el PR y la última vez que se quitó `adw:waiting-for-human` (`gh api repos/OWNER/REPO/issues/N/timeline --paginate`, eventos `unlabeled`). El intento en curso es ese número más uno.
 - **Rechazo pendiente:** si la última acta es un rechazo y ninguna revisión del plan posterior la cita, el rechazo todavía no ha llegado al plan. Pasa cuando el humano devuelve el turno tras agotarse el tope.
-- **`documentation:documented`:** el documento y su entrada en el índice están en la rama respecto a la base, registrados o en la copia de trabajo (`git diff --name-only origin/<base>` y `git status --porcelain`), y el documento enlaza el acta vigente. Si enlaza una anterior, describe otro diff y no cuenta.
+- **`documentation:documented`:** el documento y su entrada en el índice, y las decisiones con la suya si hubo preguntas con opciones, están en la rama respecto a la base, registrados o en la copia de trabajo (`git diff --name-only origin/<base>` y `git status --porcelain`), y el documento enlaza el acta vigente. Si enlaza una anterior, describe otro diff y no cuenta.
 
 **Escritura.** Cambia etiquetas con `gh issue edit <URL> --add-label … --remove-label …`, sin reemplazar el resto. Si una etiqueta no existe, créala con `gh label create`. Al abrir un stage, pon su etiqueta antes de nada. En lo demás, publica primero y cambia las etiquetas al final: quien vea una etiqueta nueva ya encontrará en GitHub lo que anuncia.
 
@@ -126,9 +126,9 @@ Capturas, vídeos y extractos de texto
 
 </details>
 
-<details><summary>Fidelidad · <criterios cubiertos> · <contención></summary>
+<details><summary>Fidelidad · <criterios cubiertos> · <contención> · <documentación></summary>
 
-Matriz criterio → afirmaciones y test asociado · cambios sin justificar · criterios sin cubrir
+Matriz criterio → afirmaciones y test asociado · cambios sin justificar · criterios sin cubrir · documentos revisados y desfasados
 
 </details>
 
@@ -180,8 +180,8 @@ El plan, el plan de verificación y el acta viven en la issue, no en la rama. `p
 | `implement` | Antes de lanzarlo, escribe el plan vigente en `plans/issue-N.md`. Bórralo cuando termine: no forma parte del Change. |
 | `plan_verification` | Lee el código de la base, no de la copia de trabajo, que puede estar en la rama de otro caso: `git show origin/<base>:<ruta>`. El plan de verificación se escribe en `.adw/evidence/issue-N/verification-plan.md`. Publícalo en la issue como comentario que empiece por `<!-- adw:verification-plan -->` y por `### ADW · plan de verificación (revisión r)`. A la vista: «Recoge:», con la especificación de la issue y las peticiones del humano y su enlace; qué cambia respecto a la revisión anterior, en una o dos frases; una tabla con cada criterio y petición y cómo se va a probar, empezando por su prueba para el revisor; las verificaciones que le tocarán al humano, y el número de afirmaciones: bloqueantes, no bloqueantes y sustituidas. Debajo, plegadas, las secciones del plan: criterios y preparación, el resumen de afirmaciones, cada dimensión, la verificación humana, la matriz y el orden de la validación, lo previsto para el humano y las dudas. Oculta la revisión anterior. |
 | `validate` | Usa `.adw/evidence/issue-N/<n>/`. Si ese directorio existe de un intento que no llegó a publicar su acta, vacíalo antes. Antes de empezar, escribe ahí el plan de verificación vigente (`verification-plan.md`) y el plan de implementación vigente (`plan.md`), que solo lee la fidelidad. El cambio validado es la rama (`git branch --show-current`), el commit de partida (`git rev-parse --short HEAD`) y la huella completa del árbol de la copia de trabajo, cambios sin registrar incluidos (`bash .claude/skills/adw/scripts/tree.sh`). Antes de verificar, comprueba que la aplicación sirve la copia de trabajo: en modo host, `buffalo dev` recompila solo al cambiar el código: espera a que su salida muestre una compilación posterior al último cambio, o reinícialo; en modo Docker completo (`docker compose ps` muestra `app`), reconstrúyela con `docker compose up --build -d app` y espera a que `/healthz` responda. El navegador usa la sesión `-s=issue-N`, que se cierra al terminar. El acta se escribe en `acta.md`, según la plantilla de [Acta](#acta), y se publica con `gh issue comment <URL> --body-file .adw/evidence/issue-N/<n>/acta.md --attach <fichero> …`, con un `--attach` por cada captura o vídeo. Después, oculta el acta anterior. |
-| `document` | Escribe `docs/changes/<tipo>-<N>-<slug>.md` y su entrada en `docs/changes/README.md` en la copia de trabajo. No hace commit. |
-| `publish` | Hace commit con un mensaje convencional según el tipo (`feat:`, `fix:` o `chore:`), documento incluido. Comprueba con `git diff --name-only <huella del acta> HEAD` que solo difieren `docs/changes/<tipo>-<N>-<slug>.md` y `docs/changes/README.md`. Después, `git push -u origin <rama>`. Si no hay PR, lo abre con `gh pr create --repo OWNER/REPO --base <base> --head <rama> --body-file <fichero>`, con `Closes <URL de la issue>` y el enlace al plan vigente en la descripción, y comenta el enlace en la issue. Si ya existe, el push lo actualiza, `gh pr edit <URL> --body-file <fichero>` renueva la descripción y, si estaba en borrador, `gh pr ready <URL>` lo deja listo para revisión. La descripción sigue la plantilla de [Descripción del PR](#descripción-del-pr). |
+| `document` | Escribe `docs/history/changes/<tipo>-<N>-<slug>.md` y su entrada en `docs/history/changes/README.md` en la copia de trabajo. Las preguntas con opciones son las de los comentarios `<!-- adw:clarification -->`, y sus respuestas, los comentarios del humano que las contestan: si las hay, escribe también `docs/history/decisions/<tipo>-<N>-<slug>.md` y su entrada en `docs/history/decisions/README.md`. No hace commit. |
+| `publish` | Hace commit con un mensaje convencional según el tipo (`feat:`, `fix:` o `chore:`), documento incluido. Comprueba con `git diff --name-only <huella del acta> HEAD` que solo difieren `docs/history/changes/<tipo>-<N>-<slug>.md`, `docs/history/changes/README.md` y, si existen, `docs/history/decisions/<tipo>-<N>-<slug>.md` y `docs/history/decisions/README.md`. Después, `git push -u origin <rama>`. Si no hay PR, lo abre con `gh pr create --repo OWNER/REPO --base <base> --head <rama> --body-file <fichero>`, con `Closes <URL de la issue>` y el enlace al plan vigente en la descripción, y comenta el enlace en la issue. Si ya existe, el push lo actualiza, `gh pr edit <URL> --body-file <fichero>` renueva la descripción y, si estaba en borrador, `gh pr ready <URL>` lo deja listo para revisión. La descripción sigue la plantilla de [Descripción del PR](#descripción-del-pr). |
 | `answer_review` | Responde con comentarios en el PR. |
 | `report_failure` | Comenta en la issue, a la vista, qué stage ha fallado, por qué y que el humano quite `adw:waiting-for-human` para reintentar. Si se agotó el tope, lo dice e indica el valor de `max_rejections`. El detalle, plegado: los registros del fallo o el resumen de los rechazos de la racha, con el enlace a cada acta. |
 
@@ -229,7 +229,7 @@ Cada medida y cómo repetirla: [acta de verificación](<enlace>) · [plan de ver
 
 - **Capas y ficheros:** …
 - **Tests:** …
-- **Documento de cierre:** …
+- **Documentación:** los documentos de `docs/knowledge/` y `docs/procedures/` que actualiza el cambio, el documento de cierre y, si las hay, las decisiones
 - **Plan de implementación:** [revisión r](<enlace>)
 - **Informe de `implement`:** los comandos que fallaron, si los hubo
 - **Observaciones menores:** …

@@ -17,6 +17,7 @@ La aplicación es Buffalo sobre PostgreSQL, con Pop como ORM y plantillas Plush.
 | Datos de test | `fixtures/` | Escenarios TOML que cargan los tests |
 | Tests de navegador | `e2e/`, `playwright.config.ts` | Recorridos en Chromium contra la aplicación arrancada con `GO_ENV=test`. Prueban lo que depende del navegador |
 | Arranque | `cmd/app/` | Migrar y servir |
+| Documentación | `docs/` | Lo que hace el sistema y cómo se trabaja en él, y la historia de los casos. Ver `docs/README.md` |
 | Trigger | `adws/` | El lanzador del workflow `adw`. No es parte de la aplicación |
 
 `models` no importa `actions` ni `templates`. Las dependencias van de las acciones al modelo.
@@ -31,12 +32,13 @@ La aplicación es Buffalo sobre PostgreSQL, con Pop como ORM y plantillas Plush.
 - **Tests.** `ActionSuite` (peticiones y render) y `ModelSuite` (reglas del modelo) sobre `github.com/gobuffalo/suite/v4`. Se nombran `Test_<Recurso><Acción>_<Caso>`. Preparan datos con `as.LoadFixture` o `ValidateAndCreate` y comprueban el código HTTP y el efecto en la base de datos. Ver `actions/tasks_test.go`.
 - **Tests de navegador.** Lo que depende del navegador, como el JavaScript de `public/assets/` o un recorrido que solo se ve en la página, se prueba con Playwright en `e2e/<grupo>/<caso>.spec.ts`: un test por fichero, que importa `test` y `expect` de `e2e/fixtures.ts`, prepara las tareas con la fixture `tasks`, usa localizadores por rol y nombre accesible (`getByRole`) y comprueba el efecto visible, y el persistido recargando la página. Ver `e2e/tareas/`.
 - **Formato y comprobaciones.** `gofmt`, `go vet ./...`, `go test -p 1 ./...` con la base de datos de test migrada, `go build ./...`, `npx playwright test` y `docker build`, como en `.github/workflows/ci.yaml`.
+- **Documentación.** Lo que describe el sistema vive en `docs/knowledge/` (qué hace) y `docs/procedures/` (cómo se trabaja), con los índices que parten de `docs/README.md`. Un cambio que modifica un comportamiento, una regla, un texto o un comando que describen esos documentos los actualiza en el mismo cambio. Se escribe lo vigente, como si siempre hubiera sido así: sin «antes» ni «ahora» y sin el número del caso. Una funcionalidad nueva que no encaja en un documento existente tiene el suyo en `docs/knowledge/features/`, con su entrada en el índice.
 
 ## Zonas fuera del alcance de un caso
 
-Un caso no toca estas rutas salvo que su issue lo pida expresamente: `.github/`, `.claude/`, `.devcontainer/`, `adws/`, `config/`, `go.mod` y `go.sum`, `package.json`, `package-lock.json` y `playwright.config.ts`, las migraciones ya existentes y los documentos de otros casos en `docs/changes/`. La fidelidad lo comprueba sobre `git diff --name-only` respecto a la base.
+Un caso no toca estas rutas salvo que su issue lo pida expresamente: `.github/`, `.claude/`, `.devcontainer/`, `adws/`, `config/`, `go.mod` y `go.sum`, `package.json`, `package-lock.json` y `playwright.config.ts`, las migraciones ya existentes, estas convenciones y los documentos de otros casos en `docs/history/`. La fidelidad lo comprueba sobre `git diff --name-only` respecto a la base.
 
-El documento de cierre del propio caso y su entrada en `docs/changes/README.md` no forman parte del cambio que se juzga: son su documentación, y la contención no los evalúa.
+Los documentos de `docs/history/` del propio caso (su documento de cierre, sus decisiones y sus entradas en los índices) no forman parte del cambio que se juzga: los escribe `document` al cerrar el caso, y la contención no los evalúa. Los de `docs/knowledge/` y `docs/procedures/` sí: los actualiza el cambio, y los juzgan D1 y D3.
 
 ## Severidad
 
@@ -108,11 +110,11 @@ Material: las cadenas nuevas o cambiadas que ve el usuario (plantillas, flashes,
 
 ### D1 · Contención
 
-Material: cada fragmento del diff, salvo el documento de cierre del caso y su entrada en el índice, el plan de implementación vigente y la especificación (criterios, aclaraciones y peticiones de cambio).
+Material: cada fragmento del diff, salvo los documentos de `docs/history/` del caso, el plan de implementación vigente y la especificación (criterios, aclaraciones y peticiones de cambio).
 
-- **Pasa:** el fragmento responde a un criterio o una petición a través de un paso del plan, o es un cambio mecánico que alguno exige: el formato del código tocado, el test de un criterio, la migración o el fixture que necesita.
+- **Pasa:** el fragmento responde a un criterio o una petición a través de un paso del plan, o es un cambio mecánico que alguno exige: el formato del código tocado, el test de un criterio, la migración o el fixture que necesita, la actualización de un documento de `docs/knowledge/` o `docs/procedures/` que el cambio deja desfasado.
 - **`nit`:** un ajuste de formato en una línea contigua al cambio.
-- **`blocker`:** una funcionalidad, una opción o un texto que nadie ha pedido; un refactor, un renombre o una reordenación que ningún criterio necesita; un cambio en una zona fuera del alcance del caso; un comportamiento existente cambiado o eliminado sin que se pida. Una mejora razonable sigue siendo un cambio no pedido.
+- **`blocker`:** una funcionalidad, una opción o un texto que nadie ha pedido; un refactor, un renombre o una reordenación que ningún criterio necesita; un cambio en una zona fuera del alcance del caso; un comportamiento existente cambiado o eliminado sin que se pida; documentación reescrita sobre algo que el cambio no toca. Una mejora razonable sigue siendo un cambio no pedido.
 
 El plan de implementación sirve para entender por qué existe un fragmento. No justifica por sí solo un fragmento que ningún criterio pide.
 
@@ -124,3 +126,12 @@ Material: cada criterio, la afirmación que lo cubre y el test que se le asocia.
 - **`blocker`:** el test asociado prueba otra cosa o un caso más débil que el criterio; ningún test cubre el criterio.
 
 Solo se aplica a criterios con comportamiento observable. Uno sin él (documentación, una tarea sin efecto visible) no necesita test: basta con la declaración de su motivo.
+
+### D3 · Documentación al día
+
+Material: el diff, y los documentos de `docs/knowledge/` y `docs/procedures/` que describen lo que el diff toca, localizados recorriendo los índices desde `docs/README.md`.
+
+- **Pasa:** cada documento que describía un comportamiento, una regla, un texto o un comando que el cambio modifica lo describe ya como queda; lo nuevo que ve el usuario está descrito en `docs/knowledge/`; los documentos cuentan lo vigente, sin la historia del caso. Si el cambio no toca nada descrito, pasa con la lista de los documentos revisados.
+- **`nit`:** redacción mejorable; un detalle secundario que se podría añadir.
+- **`should-fix`:** un documento que cuenta la historia del cambio («antes…, ahora…», el número del caso) en vez de lo vigente; lo nuevo descrito en un documento que no le toca, o un documento nuevo sin entrada en el índice de su carpeta; un detalle para desarrolladores que falta en `docs/procedures/`.
+- **`blocker`:** un documento que sigue describiendo el comportamiento, la regla, el texto o el comando de antes del cambio; un documento que describe algo que el diff no hace; una funcionalidad o una regla nueva que ve el usuario sin describir en ningún documento de `docs/knowledge/`.

@@ -9,7 +9,8 @@ description: Convierte la especificación en un plan de verificación con afirma
 
 - `specification`: título, descripción, criterios, aclaraciones y tipo de la petición, y las peticiones de cambio del humano con los comentarios que las motivan, si las hay.
 - El plan de verificación vigente, si lo hay.
-- Las convenciones del proyecto (`docs/conventions.md`), con las rúbricas de los juicios.
+- Las convenciones del proyecto (`docs/procedures/conventions.md`), con las rúbricas de los juicios.
+- La documentación viva de la base, desde `docs/README.md`, para saber qué documentos describen lo que pide la especificación.
 - La ruta donde escribir el plan, que da el adaptador.
 
 ## Qué hace
@@ -33,7 +34,7 @@ description: Convierte la especificación en un plan de verificación con afirma
 5. Incluye siempre:
    - **Estructural:** los gates de formato, análisis y compilación, bloqueantes, y la imagen de Docker, informativa; el juicio del diff con las rúbricas de estructura de las convenciones.
    - **Funcional:** la suite completa sin regresiones, con los tests de navegador, bloqueante, y, para cada test nuevo que demuestra un criterio, su ejecución en rojo sobre la base y en verde sobre el cambio. En un bug, el test de regresión es obligatorio. Si el criterio depende del navegador, como el JavaScript de `public/assets/`, el test que lo demuestra es de navegador: uno de Go no ejecuta ese código y pasaría también en la base.
-   - **Fidelidad:** la cobertura (cada criterio con sus afirmaciones y, si tiene comportamiento observable, un test asociado) y la contención (cada cambio del diff trazado a un criterio), las dos bloqueantes.
+   - **Fidelidad:** la cobertura (cada criterio con sus afirmaciones y, si tiene comportamiento observable, un test asociado), la contención (cada cambio del diff trazado a un criterio) y la documentación al día (cada documento de `docs/knowledge/` y `docs/procedures/` que describe lo que cambia, actualizado; nombra los que ya sabes que lo describen), las tres bloqueantes.
 
    Las verificaciones humanas y las declaraciones de que algo no tiene comportamiento observable nunca son bloqueantes.
 6. Fija la evidencia según el método:

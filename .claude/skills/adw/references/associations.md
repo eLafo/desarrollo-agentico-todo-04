@@ -23,7 +23,7 @@ Los artefactos se referencian por identidad, nunca por su funcionamiento interno
 | `Verification.change` | El Change del caso. Tiene `implemented` mientras el Change lo tenga. |
 | `Verification.environment` | El Environment del caso. Está listo mientras tenga `ready`. |
 | `Verification.rationale` | El Plan del caso: su revisión vigente. |
-| `Documentation.work_item` | La Issue del caso: su identidad, tipo, título y criterios. |
+| `Documentation.work_item` | La Issue del caso: su identidad, tipo, título y criterios, y las preguntas con opciones que respondió el humano. |
 | `Documentation.change` | El Change y la Verification del caso. Está listo mientras el Change tenga `implemented` y la Verification `validated`. El acta vigente alimenta la sección de pruebas. |
 | `Documentation.environment` | El Environment del caso. La copia de trabajo está en la rama del caso mientras tenga `ready` o `released`. |
 | `Environment.work_item` | La Issue del caso: su identidad, tipo y título. Está clara mientras la Issue tenga `clarified`. |

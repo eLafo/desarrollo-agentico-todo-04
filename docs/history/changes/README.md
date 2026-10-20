@@ -2,7 +2,9 @@
 
 Cada caso que cierra el workflow `adw` deja aquí su documento de cierre: qué se construyó, cómo se usa, cómo se probó y qué conviene saber para trabajar sobre ello. Lo escribe la skill `document` en la rama del caso, y viaja en el PR con el código.
 
-Este índice es condicional: cada entrada dice cuándo conviene cargar su documento. Las skills `feature`, `bug` y `chore` lo consultan al planificar y leen solo los documentos cuyas condiciones encajan con el encargo.
+Este índice es condicional: cada entrada dice cuándo conviene cargar su documento. Se llega a él desde [`docs/README.md`](../../README.md): quien planifica, como las skills `feature`, `bug` y `chore`, lee solo los documentos cuyas condiciones encajan con el encargo.
+
+Un documento de cierre cuenta qué pasó en su caso, y no se reescribe cuando otro caso cambia el mismo código. Lo vigente está en `docs/knowledge/` y `docs/procedures/`.
 
 ## Formato de las entradas
 

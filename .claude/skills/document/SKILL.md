@@ -1,6 +1,6 @@
 ---
 name: document
-description: Escribe o actualiza el documento de cierre de un cambio en docs/changes/ y su entrada en el índice condicional docs/changes/README.md, a partir del diff real y del acta de su verificación. Úsala para documentar el cambio de una rama antes de publicarlo. No registra ni publica nada.
+description: Escribe o actualiza el documento de cierre de un cambio en docs/history/changes/ y su entrada en el índice condicional, a partir del diff real y del acta de su verificación, y registra en docs/history/decisions/ las preguntas con opciones que respondió el humano. Úsala para documentar el cambio de una rama antes de publicarlo. No registra ni publica nada.
 allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git diff *), Bash(git status *), Bash(git log *), Bash(git show *)
 ---
 
@@ -8,12 +8,15 @@ allowed-tools: Read, Glob, Grep, Write, Edit, Bash(git diff *), Bash(git status 
 
 El documento de cierre explica qué se construyó, cómo se usa, cómo se probó y qué conviene saber para trabajar sobre ello, para quien llegue dentro de seis meses. Se escribe en la rama y viaja en el PR con el código.
 
+Es la historia del caso, y no sustituye a la documentación viva: lo que hace el sistema y cómo se trabaja en él están en `docs/knowledge/` y `docs/procedures/`, y los actualiza el propio cambio. No los toques: si ves uno desfasado, dilo en tu informe.
+
 ## Entradas
 
 - La petición: número, tipo, título y criterios.
 - La base del cambio, por ejemplo `origin/main`.
 - El acta de la verificación: su enlace y su resumen.
-- La ruta del documento, `docs/changes/<tipo>-<N>-<slug>.md`.
+- La ruta del documento, `docs/history/changes/<tipo>-<N>-<slug>.md`.
+- Las preguntas con opciones que respondió el humano en el caso, con las opciones, su respuesta y el enlace a ella. Pueden no ser ninguna.
 
 ## Procedimiento
 
@@ -48,8 +51,9 @@ El documento de cierre explica qué se construyó, cómo se usa, cómo se probó
    <Decisiones, limitaciones y lo que queda fuera.>
    ```
 
-4. Añade su entrada al índice `docs/changes/README.md`, o actualízala si ya existe, con tres a cinco condiciones de carga concretas, en el formato que describe el propio índice.
-5. Comprueba que solo has escrito esos dos ficheros.
+4. Añade su entrada al índice `docs/history/changes/README.md`, o actualízala si ya existe, con tres a cinco condiciones de carga concretas, en el formato que describe el propio índice.
+5. Si el humano respondió preguntas con opciones, escribe `docs/history/decisions/<tipo>-<N>-<slug>.md`, con el mismo nombre que el documento de cierre, y su entrada en `docs/history/decisions/README.md`, en el formato que describe ese índice. Una sección por pregunta, con la respuesta en palabras del humano. Enlázalo desde las Notas del documento de cierre. Si no hubo preguntas, no lo crees.
+6. Comprueba que solo has escrito esos ficheros: el documento de cierre y su entrada y, si las hay, las decisiones y su entrada.
 
 ## Reglas
 

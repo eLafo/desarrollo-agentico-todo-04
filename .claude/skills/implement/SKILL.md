@@ -12,7 +12,8 @@ allowed-tools: Bash, Read, Glob, Grep, Write, Edit
 2. Verifica que las rutas, el estado inicial y los supuestos esenciales todavía coinciden con el repositorio.
 3. Ejecuta los pasos en el orden indicado, respetando su alcance, exclusiones y decisiones.
 4. Añade o actualiza únicamente los tests exigidos por el plan y ejecuta sus comandos de validación. Escribe los tests de navegador como indica `.claude/skills/playwright-cli/references/test-generation.md`: desde `e2e/seed.spec.ts`, recorre el caso con `playwright-cli` para obtener el código y añade las aserciones. Un test por fichero, en `e2e/<grupo>/<caso>.spec.ts`, importando `test` y `expect` de `e2e/fixtures.ts`, que deja la lista vacía y crea las tareas que pidas. Ejecútalos con `npx playwright test <fichero>`.
-5. Revisa `git diff --check`, `git diff` y `git status --short` al finalizar.
+5. Actualiza los documentos que lista la sección «Documentación afectada» del plan para que describan el cambio tal como queda: lo vigente, en el estilo de cada documento y sin la historia del caso. No toques `docs/history/`: lo escribe `document` al cerrar el caso.
+6. Revisa `git diff --check`, `git diff` y `git status --short` al finalizar.
 
 No rediseñes la solución, no amplíes el alcance y no crees ni reescribas un plan. Puedes resolver detalles mecánicos menores cuando exista un patrón inequívoco en el repositorio. Si el plan está obsoleto, contiene una ambigüedad relevante, requiere secretos o no puede ejecutarse con seguridad, detente y explica el bloqueo en vez de elegir una solución nueva.
 

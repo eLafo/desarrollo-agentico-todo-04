@@ -15,9 +15,9 @@ La prueba de que el Change cumple la especificación. Validar es decidir si el c
 | --- | --- | --- | --- |
 | **Pregunta** | ¿Está bien construido? | ¿Funciona lo que hay? | ¿Es lo pedido, y solo lo pedido? |
 | **Referencia** | Las convenciones del proyecto: capas, patrones del repositorio y principios de diseño | El comportamiento esperado, sin regresiones | La `specification`. El plan de implementación solo explica por qué existe un cambio; nunca es la referencia |
-| **Regla de decisión** | Un `blocker` rechaza; un `should-fix` va a la propuesta como deuda; un `nit` solo se informa | Si falla una afirmación bloqueante, rechaza | Si queda un criterio sin cubrir o hay un cambio no pedido, rechaza |
+| **Regla de decisión** | Un `blocker` rechaza; un `should-fix` va a la propuesta como deuda; un `nit` solo se informa | Si falla una afirmación bloqueante, rechaza | Si queda un criterio sin cubrir, hay un cambio no pedido o un documento desfasado, rechaza |
 
-Fidelidad tiene dos caras: **cobertura**, cada cosa pedida está hecha, y **contención**, cada cambio del diff responde a algo pedido, sin ampliaciones de alcance, refactors no pedidos ni extras. Los cambios mecánicos necesarios (formato, tests, migraciones que exige un criterio) son legítimos si se trazan a un criterio a través de un paso del plan.
+Fidelidad tiene dos caras: **cobertura**, cada cosa pedida está hecha, y **contención**, cada cambio del diff responde a algo pedido, sin ampliaciones de alcance, refactors no pedidos ni extras. Los cambios mecánicos necesarios (formato, tests, migraciones que exige un criterio, la actualización de la documentación que el cambio deja desfasada) son legítimos si se trazan a un criterio a través de un paso del plan. Y comprueba además que la **documentación sigue al día**: si un documento que describe el sistema sigue contando lo de antes del cambio, el cambio no está terminado.
 
 Funcional y fidelidad se tocan. La funcional prueba que funciona, incluido lo que la especificación no menciona (casos límite, errores, regresiones). La fidelidad no vuelve a probar: cita las evidencias de las otras dimensiones y añade lo suyo, los criterios que nadie cubre y los cambios que ningún criterio justifica.
 

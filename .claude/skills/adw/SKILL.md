@@ -92,7 +92,7 @@ Bucle de corrección: intento <k> de <max_rejections>
   - `write_plan` y `plan_verification`: el comentario del plan existe en la issue y cubre lo que debía.
   - `implement`: hay diff y corresponde al plan.
   - `validate`: el acta está publicada, su veredicto sigue la regla de decisión del plan y existe cada fichero que cita en `.adw/evidence/`.
-  - `document`: el documento y su entrada en el índice están en la copia de trabajo, y nada más ha cambiado.
+  - `document`: el documento de cierre y su entrada en el índice, y las decisiones si hubo preguntas con opciones, están en la copia de trabajo, y nada más ha cambiado.
   - `teardown_environment`: `/healthz` ya no responde.
   - `publish`: el PR contiene la cabeza de la rama, no está en borrador y su descripción dice «validada en» ese commit.
 - Aplica las reglas de GSM sobre el resultado: milestones alcanzados, invalidaciones y su propagación, guards que se cumplen. Proyecta cada cambio.

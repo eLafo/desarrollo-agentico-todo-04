@@ -15,7 +15,7 @@ description: Registra los cambios del caso y publica la propuesta para revisión
 ## Qué hace
 
 1. Registra todos los cambios con un mensaje convencional según el tipo, documento incluido. El checkout estaba limpio al empezar, así que todos los cambios son del caso.
-2. Comprueba que lo registrado es lo que se validó: respecto al cambio validado del acta solo pueden diferir el documento de cierre y su índice. Si difiere algo más, no publiques: es un fallo, porque la verificación ya no vale.
+2. Comprueba que lo registrado es lo que se validó: respecto al cambio validado del acta solo pueden diferir los ficheros que escribe `document`, el documento de cierre y las decisiones con sus índices. Si difiere algo más, no publiques: es un fallo, porque la verificación ya no vale.
 3. Publícalos.
 4. Si la propuesta no existe, créala con la descripción que se indica abajo. Después avisa en la petición.
 5. Si la propuesta ya existe, actualízala con los cambios y renueva su descripción. Si guardaba trabajo sin validar, déjala lista para revisión.
