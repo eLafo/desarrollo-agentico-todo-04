@@ -135,3 +135,5 @@ Material: el diff, y los documentos de `docs/knowledge/` y `docs/procedures/` qu
 - **`nit`:** redacción mejorable; un detalle secundario que se podría añadir.
 - **`should-fix`:** un documento que cuenta la historia del cambio («antes…, ahora…», el número del caso) en vez de lo vigente; lo nuevo descrito en un documento que no le toca, o un documento nuevo sin entrada en el índice de su carpeta; un detalle para desarrolladores que falta en `docs/procedures/`.
 - **`blocker`:** un documento que sigue describiendo el comportamiento, la regla, el texto o el comando de antes del cambio; un documento que describe algo que el diff no hace; una funcionalidad o una regla nueva que ve el usuario sin describir en ningún documento de `docs/knowledge/`.
+
+Un documento está desfasado por lo que afirma: lo que sigue siendo cierto después del cambio no lo está, aunque mencione lo mismo (el tamaño de una columna que el cambio no toca, por ejemplo). Varios fragmentos desfasados por la misma omisión son un solo hallazgo, con todas sus citas.
