@@ -22,9 +22,9 @@ Las comprueba `Task.Validate` al crear y al editar:
 | Regla | Mensaje si no se cumple |
 | --- | --- |
 | Es obligatorio. Un título solo con espacios cuenta como vacío | «El título es obligatorio.» |
-| Tiene como mucho 200 caracteres (`models.TitleMaxLength`), contados sin los espacios del principio y del final | «El título no puede superar los 200 caracteres.» |
+| Tiene como mucho 120 caracteres (`models.TitleMaxLength`), contados sin los espacios del principio y del final | «El título no puede superar los 120 caracteres.» |
 
-Antes de guardar, la acción quita los espacios del principio y del final. Los campos de título del navegador tienen también `maxlength="200"`.
+Antes de guardar, la acción quita los espacios del principio y del final. Los campos de título del navegador tienen también `maxlength="120"`.
 
 ## Añadir
 
@@ -34,7 +34,7 @@ Antes de guardar, la acción quita los espacios del principio y del final. Los c
 
 ## Editar
 
-- Se llega desde el enlace de editar de cada tarea. La pantalla tiene el enlace «← Volver a la lista», el título «Editar tarea» y el campo «Título» con el título actual. Debajo, la ayuda: «Hasta 200 caracteres. Los demás datos de la tarea no cambian.».
+- Se llega desde el enlace de editar de cada tarea. La pantalla tiene el enlace «← Volver a la lista», el título «Editar tarea» y el campo «Título» con el título actual. Debajo, la ayuda: «Hasta 120 caracteres. Los demás datos de la tarea no cambian.».
 - «Guardar cambios» cambia solo el título: si la tarea estaba completada, lo sigue estando. Después vuelve a la lista con el aviso «Tarea actualizada.».
 - Con un título inválido, la pantalla se vuelve a mostrar con `422` y el mensaje. «Cancelar» vuelve a la lista sin cambiar nada.
 - Si la tarea no existe, `404`.
