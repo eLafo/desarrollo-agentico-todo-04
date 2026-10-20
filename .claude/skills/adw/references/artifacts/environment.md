@@ -1,6 +1,6 @@
 # Environment
 
-El lugar donde se trabaja en el caso: una rama propia y un entorno de desarrollo que se arranca cuando hace falta y se para al terminar.
+El lugar donde se trabaja en el caso: una rama propia, en una copia de trabajo propia, y un entorno de desarrollo aislado, con su base de datos y sus puertos, que se arranca cuando hace falta y se para al terminar.
 
 ## Información
 
@@ -27,4 +27,4 @@ El lugar donde se trabaja en el caso: una rama propia y un entorno de desarrollo
 | `ready` | La copia de trabajo está en la rama del caso, al día, y el entorno de desarrollo responde | La copia de trabajo cambia de rama, se queda atrás o el entorno deja de responder |
 | `released` | El entorno de desarrollo está parado y la copia de trabajo sigue en la rama del caso | El entorno vuelve a arrancar o la copia de trabajo cambia de rama |
 
-`ready` y `released` describen la máquina donde trabaja el sistema, no el caso en general. Como en esta práctica varios casos comparten una sola copia de trabajo, trabajar en otro caso los invalida, y `Setup` se vuelve a abrir cuando vuelve a haber `demand`.
+`ready` y `released` describen la copia de trabajo del caso en la máquina donde trabaja el sistema, no el caso en general. Cada caso tiene la suya y su entorno, que no comparte con ningún otro: trabajar en otro caso no los invalida, y varios casos pueden avanzar a la vez. La copia de trabajo existe antes de la primera invocación del caso y se borra cuando el caso termina; quién lo hace lo dice el adaptador.
