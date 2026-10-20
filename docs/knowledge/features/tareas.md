@@ -43,7 +43,7 @@ Antes de guardar, la acción quita los espacios del principio y del final. Los c
 
 - El botón de cada tarea la alterna entre pendiente y completada. Una tarea completada lleva la etiqueta «Completada», y su botón pasa a reabrirla.
 - Sin JavaScript, el formulario envía `PUT /tasks/{task_id}/toggle`, la acción cambia el estado y vuelve a la lista. No hay aviso.
-- Con JavaScript, `app.js` cambia la tarea en la página sin recargarla (la etiqueta, el estado del botón y su nombre accesible) y después llama a `fetch(form.action)`.
+- Con JavaScript, `app.js` cambia la tarea en la página sin recargarla (la etiqueta, el estado del botón y su nombre accesible) y guarda el cambio con la misma petición que el formulario, enviada con `fetch`. Al recargar, la tarea sigue como se dejó.
 
 ## Eliminar
 
