@@ -21,7 +21,7 @@ description: Convierte la especificación en un plan de verificación con afirma
 
    | Campo | Contenido |
    | --- | --- |
-   | Afirmación | Qué se dice que es verdad y de qué criterio o petición sale |
+   | Afirmación | Qué se dice que es verdad, en una frase que se entiende sin el plan, y de qué criterio o petición sale. Esa frase es el nombre con el que el humano la verá en el acta: «El servidor rechaza 121 caracteres al crear y al editar» |
    | Dimensión | Estructural, funcional o fidelidad |
    | Método | Automatizado, juicio del LLM o humano. Si es juicio, la rúbrica que aplica |
    | Procedimiento | Cómo se comprueba, descrito por lo observable (pantalla, acción, dato), no por detalles de implementación que todavía no existen. |
@@ -51,10 +51,11 @@ description: Convierte la especificación en un plan de verificación con afirma
    | Juicio del LLM | Acta de juicio: rúbrica, cita literal, razonamiento por criterio, refutación, confianza y procedencia |
 
 7. Para cada criterio y cada petición, fija su **prueba para el revisor**: la evidencia de una de sus afirmaciones bloqueantes que lo demuestra a la vista, la que verá el humano en la propuesta. Un vídeo si es un recorrido, una captura si es un estado, dos capturas si se comparan dos estados (con y sin, antes y después) o un extracto corto de salida si no tiene interfaz. Es una evidencia más, no un sustituto: la decisión sigue saliendo del valor medido.
-8. Si es una revisión, conserva las afirmaciones anteriores y añade las de las peticiones nuevas. Si una petición o una aclaración del humano cambia lo que pedía un criterio, sustituye sus afirmaciones: la anterior se queda en el plan marcada «sustituida por Ak». Nada más justifica quitar o suavizar una afirmación: ni un rechazo ni lo que se descubra al validar.
-9. Si aparece un caso que la especificación no resuelve (por ejemplo, qué mostrar cuando no hay tareas), no lo decidas ni preguntes: devuélvelo como duda funcional.
-10. Comprueba que cada criterio y cada petición tienen al menos una afirmación y su prueba para el revisor, y que cada afirmación tiene resultado esperado, condición de refutación y evidencia prevista.
-11. Publica el plan para informar, no para que lo aprueben. A la vista, lo que recoge, qué cambia respecto a la revisión anterior, cómo se va a probar cada criterio y petición y lo que le tocará verificar al humano; plegado, el detalle de cada afirmación.
+8. Si es una revisión, conserva las afirmaciones anteriores y añade las de las peticiones nuevas. Si una petición o una aclaración del humano cambia lo que pedía un criterio, sustituye sus afirmaciones: la anterior se queda en el plan, marcada como sustituida por la nueva. Nada más justifica quitar o suavizar una afirmación: ni un rechazo ni lo que se descubra al validar.
+9. Si aparece un caso que la especificación no resuelve (por ejemplo, qué mostrar cuando no hay tareas), no lo decidas ni preguntes: devuélvelo como duda funcional. Si no es una duda, porque la especificación lo decide aunque no lo diga (por ejemplo, que las tareas ya guardadas no se tocan porque la petición no lo pide), anótalo como supuesto: el humano lo verá a la vista y podrá pedir otra cosa.
+10. Nombra los datos de partida y las recetas que compartan varias afirmaciones por lo que hacen («dos tareas pendientes», «escribir en un campo como el usuario»), nunca con una letra, y cítalos por ese nombre. En lo que lee el humano, no te refieras a una afirmación ni a un criterio por su identificador.
+11. Comprueba que cada criterio y cada petición tienen al menos una afirmación y su prueba para el revisor, y que cada afirmación tiene resultado esperado, condición de refutación y evidencia prevista.
+12. Publica el plan para informar, no para que lo aprueben. A la vista, lo que recoge, qué cambia respecto a la revisión anterior si la hay, la prueba para el revisor de cada criterio y petición, lo que le tocará decidir al humano y los supuestos. Plegado, las afirmaciones agrupadas por dimensión y por criterio, cada una con quién la decide (una herramienta, un agente o el humano) y si bloquea, y la preparación.
 
 ## Resultado
 

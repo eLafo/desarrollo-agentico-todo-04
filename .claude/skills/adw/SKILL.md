@@ -51,7 +51,7 @@ El payload es una foto del momento en que ocurrió el evento y puede estar obsol
 ## 2. Reconstruye el estado
 
 1. Comprueba que el checkout está limpio (`git status --porcelain` vacío). Si no lo está, termina con error sin tocar el caso: el problema es del entorno, no del caso.
-2. Lee `max_rejections` de `config/adw.yml` en la rama del caso tal como está en `origin` (`git fetch origin <rama>` y `git show origin/<rama>:config/adw.yml`), o en su base si la rama todavía no está en `origin`. No lo leas de la copia de trabajo sin más: puede estar en la rama de otro caso. Si no es un entero mayor o igual que 1, usa 3 y dilo en el workflow.
+2. Lee `max_rejections` de `config/adw.yml` en la rama del caso tal como está en `origin` (`git fetch origin <rama>` y `git show origin/<rama>:config/adw.yml`), o en su base si la rama todavía no está en `origin`. No lo leas de la copia de trabajo sin más: puede estar en la rama de otro caso. Si no es un entero mayor o igual que 1, usa 3 y dilo en el panel del caso.
 3. Para cada artefacto del caso, determina con su adaptador qué milestones están alcanzados y qué stages abiertos. En la Verification, cuenta también los rechazos seguidos y si hay un rechazo que todavía no ha llegado al plan.
 4. Aplica el evento: comprueba si invalida algún milestone y propaga la invalidación.
 5. Si el control no te deja actuar (el caso es de otro, el turno es del humano o hay un stage abierto), termina sin publicar ni cambiar nada.
@@ -62,28 +62,12 @@ El payload es una foto del momento en que ocurrió el evento y puede estar obsol
 1. Si el caso está libre, reclámalo. Si al reclamarlo aparece otro dueño, renuncia y termina.
 2. Proyecta como abierto el primer stage cuyo guard se cumple, o los que vayas a lanzar en paralelo. Es el candado que impide otra ejecución sobre el mismo caso.
 3. Prevé la cadena: qué stages se irán abriendo con los milestones que se alcancen, qué servicio ejecuta cada uno, quién lo realiza y en qué quiescencia quedará el caso.
-4. Publica el workflow junto al artefacto donde ha ocurrido el evento. A la vista:
-
-```markdown
-### ADW · workflow para este evento
-**Evento:** <qué ha pasado y quién, en una línea> (<enlace>)
-**Siguiente:** <la cadena prevista en una línea, como «aclarar → planificar la verificación ‖ preparar el entorno ‖ planificar → implementar → validar → documentar → publicar»>. Intento <k> de <max_rejections>.
-**Se espera llegar a:** <aclaración en la issue | revisión de la propuesta | fallo tras agotar los intentos>
-```
-
-   Y plegado debajo, con el resumen «Pasos, servicios y modelos · <n> pasos»:
-
-```markdown
-Estado al empezar: <milestones alcanzados>
-1. <Artifact>.<Stage> · <servicio> · <quién lo realiza y con qué modelo> · <milestone esperado>
-2. …
-Bucle de corrección: intento <k> de <max_rejections>
-```
+4. Refleja el workflow en el panel del caso, que se edita en su sitio: no publiques un comentario por evento. A la vista, lo que estás haciendo, la cadena prevista en palabras («validar, documentar y publicar») y adónde esperas llegar (la aclaración en la issue, la revisión de la propuesta o un fallo tras agotar los intentos). En su historial, una entrada con el evento, en una línea, y, en un comentario oculto, el estado al empezar, cada paso con su servicio, quién lo realiza y con qué modelo, el milestone que espera y el intento en curso de `max_rejections`. El adaptador dice cómo es el panel.
 
 ## 4. Ejecuta y recompón
 
 - Ejecuta el servicio de cada stage abierto. Tú coordinas: decides si lo haces tú o lo delegas en subagentes (herramienta `Agent`), cuántos lanzar, de qué tipo y con qué encargo. Delega lo que necesita un contexto limpio o llenaría el tuyo, como planificar, implementar o verificar, y lanza otros de apoyo si te hacen falta, por ejemplo para explorar el código o diagnosticar un fallo.
-- Elige el modelo de cada subagente según lo que exija su trabajo: uno más capaz para lo que pide criterio, como planificar, planificar la verificación, juzgar con una rúbrica, refutar un hallazgo o decidir si una revisión pide cambios, y uno más ligero para lo mecánico, como ejecutar los gates o capturar evidencias. Indica en el workflow qué modelo usa cada unidad.
+- Elige el modelo de cada subagente según lo que exija su trabajo: uno más capaz para lo que pide criterio, como planificar, planificar la verificación, juzgar con una rúbrica, refutar un hallazgo o decidir si una revisión pide cambios, y uno más ligero para lo mecánico, como ejecutar los gates o capturar evidencias. Apunta en el panel del caso qué modelo usa cada unidad.
 - Espera el resultado de cada subagente antes de reevaluar el caso: el siguiente stage depende de él. Lanza en paralelo solo lo independiente, como lecturas o stages sin relación entre sí (`VerificationPlanning` y `Planning`, `Teardown` y `Documenting`), espéralos a todos y no dejes que escriba más de uno a la vez en la copia de trabajo. Lo que se escribe en `.adw/` no cuenta: git lo ignora.
 - No termines la invocación con subagentes en marcha. Si terminas antes de que acaben, nadie recogerá su resultado y el caso se quedará con un stage abierto.
 - Cada subagente empieza sin tu conversación: pásale todo lo que necesita y dile que nadie le va a responder, que devuelva sus dudas y bloqueos en su informe. La proyección del estado y el control del caso (etiquetas, turno, propiedad) los mantienes tú.
@@ -91,12 +75,12 @@ Bucle de corrección: intento <k> de <max_rejections>
   - `setup_environment`: la copia de trabajo está en la rama del caso y `/healthz` responde.
   - `write_plan` y `plan_verification`: el comentario del plan existe en la issue y cubre lo que debía.
   - `implement`: hay diff y corresponde al plan.
-  - `validate`: el acta está publicada, su veredicto sigue la regla de decisión del plan y existe cada fichero que cita en `.adw/evidence/`.
+  - `validate`: el acta está publicada, su veredicto sigue la regla de decisión del plan y existe cada fichero de `.adw/evidence/` que citan sus comentarios ocultos.
   - `document`: el documento de cierre y su entrada en el índice, y las decisiones si hubo preguntas con opciones, están en la copia de trabajo, y nada más ha cambiado.
   - `teardown_environment`: `/healthz` ya no responde.
   - `publish`: el PR contiene la cabeza de la rama, no está en borrador y su descripción dice «validada en» ese commit.
 - Aplica las reglas de GSM sobre el resultado: milestones alcanzados, invalidaciones y su propagación, guards que se cumplen. Proyecta cada cambio.
-- Si la cadena se desvía de lo previsto, recompón el workflow y publica el cambio con su motivo. Por ejemplo, si `write_plan` o `plan_verification` encuentran una duda, el workflow pasa a preguntar en la issue.
+- Si la cadena se desvía de lo previsto, recompón el workflow y apunta el cambio en el panel con su motivo. Por ejemplo, si `write_plan` o `plan_verification` encuentran una duda, el workflow pasa a preguntar en la issue.
 - Termina al alcanzar un milestone terminal o en quiescencia. En quiescencia, cede el turno al humano. No esperes respuestas: cuando lo devuelva, otro evento te volverá a invocar.
 
 ### Verificación
@@ -110,10 +94,13 @@ Bucle de corrección: intento <k> de <max_rejections>
 
 ### Lo que publicas
 
-- Todo lo que publicas tiene dos lectores. Arriba, a la vista y en lo que cabe en una pantalla, lo que necesita el humano: qué es, su resultado y qué se espera de él. Debajo, plegado, el detalle completo para los agentes y la auditoría. Nunca se pliega lo que pide algo al humano ni lo que explica un rechazo o un fallo.
-- La evidencia se enseña por criterio de la petición, con la prueba para el revisor que fijó el plan de verificación y una frase con lo medido, no por dimensión ni por afirmación. En la propuesta, la prueba va a la vista; en el acta, enlazada.
-- Lo superado (una revisión anterior, un acta anterior, el workflow y los avisos de un evento ya resuelto) se oculta al publicar lo que lo sustituye, sin borrarlo: sigue siendo el historial del caso, y el estado depende de él.
-- El adaptador dice cómo se pliega, cómo se oculta y cómo se leen los comentarios ocultos.
+- Todo lo que publicas tiene dos lectores. Arriba, a la vista, lo que necesita el humano: qué es, su resultado, lo que tiene que ver y qué se espera de él. Debajo, plegado, el detalle completo para los agentes y la auditoría. Lo que el humano tiene que ver o hacer nunca se pliega: las pruebas para el revisor, lo que decide, las preguntas y lo que explica un rechazo o un fallo van en su propia sección, a la vista.
+- Información estructurada, no prosa: viñetas con su etiqueta, marcas de resultado y quién decide cada comprobación (una herramienta, un agente o el humano).
+- Lo que ve el humano no lleva los identificadores del sistema (afirmaciones, criterios, rúbricas, severidades, stages, recetas del plan) ni cita lo que no puede abrir, como los ficheros de `.adw/`. Lo dice con palabras. Lo que necesitan los agentes para trazar va oculto en el mismo comentario.
+- La evidencia se enseña por criterio de la petición, con la prueba para el revisor que fijó el plan de verificación, a la vista en el acta y en la propuesta. El detalle de cada comprobación, plegado por dimensión.
+- El estado del caso está en un solo sitio, el panel, que se edita en su sitio. Solo publicas un comentario nuevo cuando el humano tiene algo nuevo que leer o le toca a él.
+- Lo superado (una revisión anterior, un acta anterior, los avisos de un turno ya resuelto) se oculta, sin borrarlo: sigue siendo el historial del caso, y el estado depende de él.
+- El adaptador dice cómo es cada comentario, cómo se pliega, cómo se oculta y cómo se leen los comentarios ocultos.
 
 ## Límites
 

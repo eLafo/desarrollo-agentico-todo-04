@@ -22,8 +22,9 @@ No recibes la justificación del implementador ni el razonamiento de otros juece
 
 1. Lee la rúbrica entera: sus niveles y sus ejemplos. Es la única referencia: no añadas criterios. Si ves algo importante que la rúbrica no cubre, anótalo aparte como observación para el humano, sin severidad.
 2. Para cada criterio de la rúbrica que aplique al material:
+   - **Enuncia** el criterio aplicado a este material, en una frase que se entiende sin la rúbrica: «La acción solo coordina», «El comentario de `TitleMaxLength` sigue siendo cierto».
    - **Cita** literalmente lo que juzgas, con fichero y línea. Comprueba que la cita existe tal cual (`git diff`, `Read`).
-   - **Razona** por qué cumple o no cumple, también cuando cumple. «Lo veo bien» no es un razonamiento.
+   - **Razona** por qué cumple o no cumple, también cuando cumple. «Lo veo bien» no es un razonamiento. Resume después el razonamiento en una frase, sin identificadores de afirmaciones ni de rúbricas.
    - **Decide** el nivel según la rúbrica: cumple, `nit`, `should-fix` o `blocker`. Un nivel que la rúbrica no prevé para ese criterio no existe.
    - **Da tu confianza:** alta si la cita basta para demostrarlo a cualquiera que lea la rúbrica; baja si depende de una interpretación o de contexto que no tienes.
 3. No contradigas un resultado automatizado: un test en rojo no se declara aceptable, y un gate en verde no se discute con un juicio.
@@ -33,14 +34,18 @@ No recibes la justificación del implementador ni el razonamiento de otros juece
 
 ```markdown
 ### <afirmación> · <rúbrica> · <criterio>
+- **Enunciado:** <el criterio aplicado a este material, en una frase>
 - **Material:** `ruta:línea` — «cita literal»
 - **Razonamiento:** …
+- **En una frase:** <el razonamiento resumido>
 - **Veredicto:** cumple | nit | should-fix | blocker
 - **Confianza:** alta | baja — por qué
 - **Procedencia:** rúbrica <id> de `docs/procedures/conventions.md` · modelo <modelo> · material <rango del diff o ficheros>
 ```
 
 Un bloque por criterio y por fragmento juzgado. Al final, la lista de hallazgos (`nit`, `should-fix`, `blocker`) y las observaciones fuera de rúbrica.
+
+El acta del juicio se queda en `.adw/` y el humano no la ve. Lo que se publica de ella es, por cada criterio, el enunciado, la cita y el razonamiento: en una frase si cumple y entero si no. Por eso esos tres campos se escriben para el humano: con palabras, sin los identificadores de la afirmación ni de la rúbrica.
 
 ## Refutar
 
