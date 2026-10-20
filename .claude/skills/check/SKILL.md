@@ -19,15 +19,16 @@ bash .claude/skills/check/scripts/check.sh [--out <directorio en .adw/>] [gate .
 | `migrate` | `soda drop -e test`, `soda create -e test` y `soda migrate -e test`: una base de test vacía, como en la CI | Sí | Funcional |
 | `test` | `GO_ENV=test go test -p 1 ./...` | Sí | Funcional |
 | `build` | `go build ./...` | Sí | Estructural |
-| `e2e` | `npx playwright test`: los tests de navegador de `e2e/`, con la aplicación arrancada por `playwright.config.ts` con `GO_ENV=test` en el puerto 3001 | Sí | Funcional |
+| `e2e` | `npx playwright test`: los tests de navegador de `e2e/`, con la aplicación arrancada por `playwright.config.ts` con `GO_ENV=test` en `E2E_PORT` (3001 en el checkout principal) | Sí | Funcional |
 | `docker` | `docker build -t todo .` | No: informativo en local; en la CI sí bloquea | Estructural |
 
 ## Uso
 
-- Sin gates, ejecuta todos en el orden de la CI. Con gates, solo esos: `check.sh gofmt vet build docker` para la dimensión estructural y `check.sh migrate test e2e` para la funcional. No ejecutes `test` ni `e2e` en dos procesos a la vez: comparten la base de datos de test.
+- Sin gates, ejecuta todos en el orden de la CI. Con gates, solo esos: `check.sh gofmt vet build docker` para la dimensión estructural y `check.sh migrate test e2e` para la funcional. No ejecutes `test` ni `e2e` en dos procesos a la vez sobre la misma copia de trabajo: comparten su base de datos de test. En worktrees distintos sí, porque cada uno tiene la suya.
 - No se para en el primer fallo, para recoger todos los defectos de una vez. Si falla `migrate`, `test` y `e2e` quedan como `skip`.
 - Con `--out`, deja en ese directorio un registro por gate, `gate-<gate>.txt`, con el comando, el código de salida, la duración y la salida recortada. Es la evidencia de los gates. El directorio tiene que estar dentro de `.adw/`.
-- `migrate`, `test` y `e2e` necesitan el servicio `db` de este proyecto en marcha (`env:start`): si el puerto 5432 es de otro proyecto, no lo tocan y dan `error`. `e2e` necesita además las dependencias de Node (`npm ci`), Chromium (`npx playwright install chromium`) y el puerto 3001 libre; si falta algo, da `error`. Con `DB_HOST`, usan ese servidor. También necesitan `soda` (`go install github.com/gobuffalo/pop/v6/soda@v6.4.1`). `docker` necesita Docker.
+- En un worktree de `bin/tree`, el script carga su `.env`: los gates usan sus puertos (`DB_PORT` y `E2E_PORT`) y su proyecto de Compose. En el checkout principal, 5432 y 3001.
+- `migrate`, `test` y `e2e` necesitan el servicio `db` de esta copia de trabajo en marcha (`env:start`): si su puerto es de otro proyecto, no lo tocan y dan `error`. `e2e` necesita además las dependencias de Node (`npm ci`), Chromium (`npx playwright install chromium`) y su puerto libre; si falta algo, da `error`. Con `DB_HOST`, usan ese servidor. También necesitan `soda` (`go install github.com/gobuffalo/pop/v6/soda@v6.4.1`). `docker` necesita Docker.
 
 ## Resultado
 

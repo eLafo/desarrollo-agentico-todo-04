@@ -7,7 +7,13 @@
 # Una sesión se registra cuando invoca adw, por el prompt (/adw …) o por la herramienta Skill.
 # Hasta que el coordinador la asocia a su issue, escribe en unknown-<n>.
 
-logs="${CLAUDE_PROJECT_DIR:-$(pwd)}/.adw/logs"
+# En el checkout principal, también si la sesión corre en un worktree de bin/tree: así los logs
+# sobreviven al borrado del worktree.
+project=${CLAUDE_PROJECT_DIR:-$(pwd)}
+if common=$(git -C "$project" rev-parse --path-format=absolute --git-common-dir 2> /dev/null); then
+  project=$(dirname "$common")
+fi
+logs="$project/.adw/logs"
 
 register() {
   local session=$1 count

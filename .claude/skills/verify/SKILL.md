@@ -1,7 +1,7 @@
 ---
 name: verify
 description: Ejecuta las afirmaciones automatizadas de un plan de verificación contra el sistema real y guarda su evidencia en ficheros (tests de Go y de navegador en rojo sobre la base y en verde sobre el cambio, transcripciones HTTP, valores del DOM con capturas y vídeos de playwright-cli, consultas a la base de datos). Úsala para comprobar un cambio con evidencia reproducible. Solo verifica e informa; no arregla nada.
-allowed-tools: Read, Glob, Grep, Write, Bash(bash .claude/skills/check/scripts/check.sh *), Bash(bash .claude/skills/verify/scripts/red-green.sh *), Bash(npx playwright test *), Bash(playwright-cli -s=issue-*), Bash(curl -sS -i http://localhost:3000/*), Bash(docker compose exec -T db psql *), Bash(tee .adw/*), Bash(git diff *), Bash(git merge-base *), Bash(ls *)
+allowed-tools: Read, Glob, Grep, Write, Bash(bash .claude/skills/check/scripts/check.sh *), Bash(bash .claude/skills/verify/scripts/red-green.sh *), Bash(npx playwright test *), Bash(playwright-cli -s=issue-*), Bash(curl -sS -i http://localhost:*), Bash(printenv APP_PORT), Bash(docker compose exec -T db psql *), Bash(tee .adw/*), Bash(git diff *), Bash(git merge-base *), Bash(ls *)
 ---
 
 # Verifica con evidencia
@@ -14,7 +14,7 @@ Recibes afirmaciones de un plan de verificación, cada una con su procedimiento,
 - El directorio de evidencias, dentro de `.adw/`, como `.adw/evidence/issue-12/1/`.
 - El número de la issue, para la sesión del navegador.
 - La base del cambio, para los tests nuevos: el commit en que la rama se separó de su base (`git merge-base HEAD origin/<base>`).
-- La aplicación en marcha en `http://localhost:3000`.
+- La aplicación en marcha en `http://localhost:<puerto>`, con el puerto de la copia de trabajo: `printenv APP_PORT` en un worktree de `bin/tree`, 3000 en el checkout principal. Escríbelo tal cual en los comandos, no `$APP_PORT`: los permisos no aprueban un comando con variables.
 
 ## Reglas de la evidencia
 
@@ -40,7 +40,7 @@ Ejecuta cada afirmación con el método que le corresponda.
   ```
 
   Crea un worktree de la base en `.adw/base/`, copia los ficheros de test del cambio, ejecuta los tests seleccionados en los dos lados, guarda las dos ejecuciones y borra el worktree. Los tests de una suite se seleccionan como `Suite/Test`; selecciona solo los tests nuevos, porque todos tienen que fallar en la base. Si los tests usan ficheros nuevos que no son de test, como un escenario de `fixtures/`, pásalos con `--extra fixtures/tasks.toml`. Solo vale el veredicto `DISCRIMINANTE`. Si es `DISCRIMINANTE (compilación)`, la base no compila con los tests: vale como rojo solo si lo que le falta a la base es el comportamiento que pide el criterio, y lo dices. Si el cambio trae migraciones, la base se ejecuta con el esquema nuevo: tenlo en cuenta al leer su rojo.
-- Un test nuevo de navegador (`e2e/*.spec.ts`), igual, con el mismo script. Cada lado arranca su propia aplicación con `GO_ENV=test` en el puerto 3001 y ejecuta el test en Chromium: en la base, la aplicación de la base con el test del cambio. Selecciona con `--run` (es el `--grep` de Playwright) o pasando solo los ficheros nuevos:
+- Un test nuevo de navegador (`e2e/*.spec.ts`), igual, con el mismo script. Cada lado arranca su propia aplicación con `GO_ENV=test` en el puerto de los tests de navegador (`E2E_PORT`, 3001 en el checkout principal) y ejecuta el test en Chromium: en la base, la aplicación de la base con el test del cambio. Selecciona con `--run` (es el `--grep` de Playwright) o pasando solo los ficheros nuevos:
 
   ```bash
   bash .claude/skills/verify/scripts/red-green.sh --out <dir> --name 05_a5-rojo-verde \
@@ -54,7 +54,7 @@ Ejecuta cada afirmación con el método que le corresponda.
 Para peticiones sin estado, guarda la transcripción completa:
 
 ```bash
-curl -sS -i http://localhost:3000/<ruta> | tee <dir>/05_a5-http.txt
+curl -sS -i http://localhost:<puerto>/<ruta> | tee <dir>/05_a5-http.txt
 ```
 
 Los formularios que cambian estado necesitan el token CSRF y la cookie de sesión: compruébalos con el navegador o con un test de acciones.
@@ -64,7 +64,7 @@ Los formularios que cambian estado necesitan el token CSRF y la cookie de sesió
 Usa `playwright-cli` (ver su skill en `.claude/skills/playwright-cli/`) con la sesión del caso, sin ventana y con el viewport fijo de `.playwright/cli.config.json`:
 
 ```bash
-playwright-cli -s=issue-12 open http://localhost:3000/
+playwright-cli -s=issue-12 open http://localhost:<puerto>/
 playwright-cli -s=issue-12 snapshot                     # referencias de los elementos
 playwright-cli -s=issue-12 eval "() => document.querySelector('.list-count').textContent" --filename=<dir>/01_a1-contador.json
 playwright-cli -s=issue-12 screenshot --filename=<dir>/02_a1-contador.png
@@ -92,7 +92,7 @@ Cada paso puede ser un comando suelto (`fill`, `type`, `click`, `press`, `select
 
 ### Persistencia
 
-Consulta la base de datos de desarrollo antes y después de la acción, y guarda las dos salidas:
+Consulta la base de datos de desarrollo antes y después de la acción, y guarda las dos salidas. `docker compose exec` va al PostgreSQL de esta copia de trabajo:
 
 ```bash
 docker compose exec -T db psql -U postgres -d todo_development -c "SELECT title, completed FROM tasks ORDER BY created_at" | tee <dir>/06_a6-db-antes.txt

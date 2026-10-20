@@ -5,12 +5,16 @@ allowed-tools: Bash, Read
 
 # Para el entorno de desarrollo
 
-Detén solo lo que pertenezca a este repositorio. No elimines contenedores, volúmenes ni datos, y no uses `docker compose down`.
+Detén solo lo que pertenezca a esta copia de trabajo: el checkout principal o un worktree de `bin/tree` (`trees/issue-N`). No elimines contenedores, volúmenes ni datos, y no uses `docker compose down`.
+
+## Puertos
+
+Los de la sesión, con `printenv APP_PORT DB_PORT`. Si no están y la copia de trabajo no tiene `.env` (`git status --short --ignored .env` no muestra `!! .env`), es el checkout principal: `3000` y `5432`. Si tiene `.env` y no están, el entorno no está cargado: detente y dilo. Escribe los puertos tal cual en los comandos.
 
 ## Detecta el modo
 
 - **Docker completo:** `docker compose ps` muestra el servicio `app` en marcha.
-- **Host:** hay un proceso `buffalo dev` cuyo directorio de trabajo es la raíz de este repositorio.
+- **Host:** hay un proceso `buffalo dev` cuyo directorio de trabajo es la raíz de esta copia de trabajo.
 
 Si no hay nada en marcha, informa de ello y termina.
 
@@ -21,13 +25,13 @@ Si no hay nada en marcha, informa de ello y termina.
 
 ## Modo host
 
-1. Localiza los procesos `buffalo dev` con `pgrep -f "buffalo dev"`. Para cada uno, comprueba con `lsof -a -p <pid> -d cwd` que su directorio de trabajo es la raíz de este repositorio. Si pertenece a otro proyecto, no lo toques.
-2. Detén los de este repositorio con `kill <pid>`.
+1. Localiza los procesos `buffalo dev` con `pgrep -f "buffalo dev"`. Para cada uno, comprueba con `lsof -a -p <pid> -d cwd` que su directorio de trabajo es la raíz de esta copia de trabajo. Si pertenece a otro proyecto o a otro worktree, no lo toques.
+2. Detén los de esta copia de trabajo con `kill <pid>`.
 3. Ejecuta `docker compose stop db`.
 
 ## Comprobación
 
-`http://localhost:3000/healthz` ya no responde y nada de este repositorio sigue escuchando en los puertos `3000` ni `5432`.
+`http://localhost:<puerto de la aplicación>/healthz` ya no responde y nada de esta copia de trabajo sigue escuchando en sus puertos.
 
 ## Resultado
 
@@ -36,4 +40,4 @@ Informa de:
 - modo detectado;
 - servicios y procesos detenidos;
 - resultado de la comprobación;
-- procesos de otros proyectos que hayas dejado intactos.
+- procesos de otros proyectos o worktrees que hayas dejado intactos.

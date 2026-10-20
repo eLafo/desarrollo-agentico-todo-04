@@ -51,11 +51,14 @@
       "Bash(pgrep *)",
       "Bash(kill *)",
       "Bash(sleep *)",
-      "Bash(curl http://localhost:3000/*)",
-      "Bash(curl -s http://localhost:3000/*)",
-      "Bash(curl -fsS http://localhost:3000/*)",
-      "Bash(curl -sS -i http://localhost:3000/*)",
-      "Bash(wget -q --spider http://localhost:3000/*)"
+      "Bash(curl http://localhost:*)",
+      "Bash(curl -s http://localhost:*)",
+      "Bash(curl -fsS http://localhost:*)",
+      "Bash(curl -sS -i http://localhost:*)",
+      "Bash(wget -q --spider http://localhost:*)",
+      "Bash(printenv APP_PORT)",
+      "Bash(printenv APP_PORT DB_PORT)",
+      "Bash(PORT=* buffalo dev)"
     ],
     "deny": [
       "Read(./.env)",
