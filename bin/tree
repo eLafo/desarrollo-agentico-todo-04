@@ -53,9 +53,8 @@ create() {
   (($# == 0)) || usage
   if [[ ! -d $dir ]]; then
     git -C "$root" fetch --quiet origin || fail "no se puede actualizar origin"
-    if ! git -C "$root" rev-parse --verify --quiet refs/remotes/origin/HEAD > /dev/null; then
-      git -C "$root" remote set-head origin --auto > /dev/null || fail "no se sabe cuál es la rama por defecto de origin"
-    fi
+    # origin/HEAD es una copia local que fetch no actualiza: se pregunta al remoto cada vez.
+    git -C "$root" remote set-head origin --auto > /dev/null || fail "no se sabe cuál es la rama por defecto de origin"
     git -C "$root" worktree add --quiet --detach "$dir" origin/HEAD || fail "no se puede crear el worktree"
   fi
   [[ -f $dir/.env ]] || write_env || fail "no se puede escribir $dir/.env"
