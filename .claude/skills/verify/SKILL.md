@@ -70,6 +70,8 @@ playwright-cli -s=issue-12 eval "() => document.querySelector('.list-count').tex
 playwright-cli -s=issue-12 screenshot --filename=<dir>/02_a1-contador.png
 ```
 
+Cada paso es un comando suelto: `fill`, `type`, `click`, `press`, `select`, `check`, `eval`, `screenshot`. `run-code` está denegado en este proyecto (`.claude/settings.json`), porque ejecuta código arbitrario: no lo uses, ni siquiera para grabar vídeos, aunque la skill de `playwright-cli` lo proponga.
+
 - **Estado:** mide el valor en el DOM con `eval … --filename=…` y haz una captura.
 - **Recorrido:** graba un vídeo corto, con un capítulo por afirmación y el valor medido antes y después:
 
