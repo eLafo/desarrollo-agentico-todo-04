@@ -25,3 +25,8 @@ Entre tres y cinco condiciones por documento, y las entradas en orden por númer
   - Cuando se cambie la protección CSRF o los campos que envía el formulario de una tarea
   - Cuando se investigue una tarea que cambia en pantalla pero vuelve a su estado al recargar
   - Cuando se escriban tests de navegador en `e2e/tareas/` que dependan de recargar la página
+- [feature-24-el-boton-de-anadir-dice-anadir-tarea.md](feature-24-el-boton-de-anadir-dice-anadir-tarea.md): el botón del formulario de nueva tarea pasa de «Añadir» a «Añadir tarea»
+  - Cuando se trabaje con `templates/tasks/index.plush.html` o con el formulario de nueva tarea
+  - Cuando se cambie el texto, el ancho o la disposición del botón de añadir, también en pantallas estrechas
+  - Cuando se escriban tests de navegador en `e2e/tareas/` que busquen el botón o el formulario por su nombre
+  - Cuando se modifique el campo «Nueva tarea», su texto de ayuda o sus mensajes de error
