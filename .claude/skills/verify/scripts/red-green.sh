@@ -35,6 +35,9 @@ usage() {
 
 root=$(git rev-parse --show-toplevel) || exit 2
 cd "$root" || exit 2
+# En un worktree de bin/tree, su .env da los puertos: los dos lados heredan E2E_PORT y DB_PORT.
+# shellcheck disable=SC1091
+[[ -f .env ]] && { set -a; . ./.env; set +a; }
 
 out="" name="" base="" run=""
 extras=()

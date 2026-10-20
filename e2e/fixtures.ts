@@ -14,7 +14,7 @@ type Fixtures = {
 function client() {
   return new pg.Client({
     host: process.env.DB_HOST ?? '127.0.0.1',
-    port: 5432,
+    port: Number(process.env.DB_PORT ?? 5432),
     user: 'postgres',
     password: 'postgres',
     database: 'todo_test',

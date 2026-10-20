@@ -1,8 +1,11 @@
-bin/
+/bin/*
+!/bin/tree
 tmp/
 *.log
 .env
 .adw/
+# Worktrees de los casos (bin/tree)
+trees/
 # Playwright CLI output (may contain credentials)
 .playwright-cli/
 # Tests de navegador (npm ci y npx playwright test)

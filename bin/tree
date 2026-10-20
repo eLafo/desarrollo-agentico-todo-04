@@ -1,0 +1,129 @@
+#!/usr/bin/env bash
+# Worktrees de los casos, cada uno con su entorno aislado: trees/issue-<N>.
+#
+#   bin/tree create <N>            Crea trees/issue-<N> desde la rama por defecto de origin, con su .env,
+#                                  e imprime su ruta. Si ya existe, solo imprime la ruta.
+#   bin/tree remove <N> [--force]  Borra el worktree y su entorno: procesos, contenedores, volumen,
+#                                  imagen, sesión del navegador y rama local.
+#
+# El .env del worktree da el nombre del proyecto de Compose y los puertos, que salen del número de la
+# issue con n = N mod 1000: aplicación 13000+n, tests de navegador 14000+n y PostgreSQL 15000+n.
+# Compose y la aplicación lo leen solos; para lo demás se carga con: set -a; . ./.env; set +a
+# El checkout principal no tiene .env: usa 3000, 3001 y 5432.
+#
+# remove se niega, salvo con --force, si el worktree tiene cambios sin registrar o commits que no
+# están en ningún remoto. Con --force se pierden. Lo ejecutan el trigger o un humano, no un agente.
+#
+# Sale con 0 si todo va bien, 1 si falla o se niega y 2 si el uso es incorrecto.
+set -o pipefail
+
+usage() {
+  echo "uso: bin/tree create <número de issue> | bin/tree remove <número de issue> [--force]" >&2
+  exit 2
+}
+
+fail() {
+  echo "bin/tree: $*" >&2
+  exit 1
+}
+
+# La raíz del checkout principal, también desde dentro de un worktree.
+common=$(git rev-parse --path-format=absolute --git-common-dir 2> /dev/null) || fail "no es un repositorio git"
+root=$(dirname "$common")
+
+(($# >= 2)) || usage
+command=$1 number=$2
+[[ $number =~ ^[1-9][0-9]*$ ]] || usage
+dir="$root/trees/issue-$number"
+
+write_env() {
+  local offset=$((number % 1000)) project
+  # Compose solo admite minúsculas, dígitos, guiones y guiones bajos en el nombre del proyecto.
+  project=$(printf '%s' "$(basename "$root")" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9_-' '-')-issue-$number
+  cat > "$dir/.env" << EOF
+# Entorno de trees/issue-$number, generado por bin/tree. Se carga con: set -a; . ./.env; set +a
+COMPOSE_PROJECT_NAME=$project
+APP_PORT=$((13000 + offset))
+E2E_PORT=$((14000 + offset))
+DB_PORT=$((15000 + offset))
+EOF
+}
+
+create() {
+  (($# == 0)) || usage
+  if [[ ! -d $dir ]]; then
+    git -C "$root" fetch --quiet origin || fail "no se puede actualizar origin"
+    if ! git -C "$root" rev-parse --verify --quiet refs/remotes/origin/HEAD > /dev/null; then
+      git -C "$root" remote set-head origin --auto > /dev/null || fail "no se sabe cuál es la rama por defecto de origin"
+    fi
+    git -C "$root" worktree add --quiet --detach "$dir" origin/HEAD || fail "no se puede crear el worktree"
+  fi
+  [[ -f $dir/.env ]] || write_env || fail "no se puede escribir $dir/.env"
+  echo "$dir"
+}
+
+# Los procesos que ha arrancado el worktree: los que tienen su directorio de trabajo dentro de él y
+# son buffalo dev o escuchan en sus puertos. Un contenedor publica sus puertos desde Docker, cuyo
+# directorio de trabajo está fuera: no se toca.
+worktree_processes() {
+  local pid cwd port pids
+  pids=$(pgrep -f 'buffalo dev')
+  for port in ${APP_PORT:-} ${E2E_PORT:-}; do
+    pids="$pids $(lsof -t -nP -iTCP:"$port" -sTCP:LISTEN 2> /dev/null)"
+  done
+  for pid in $pids; do
+    cwd=$(lsof -a -p "$pid" -d cwd -Fn 2> /dev/null | sed -n 's/^n//p')
+    [[ $cwd == "$dir" || $cwd == "$dir"/* ]] && echo "$pid"
+  done | sort -u
+}
+
+remove() {
+  local force=no branch pids args=()
+  case $# in
+    0) ;;
+    1) [[ $1 == --force ]] || usage; force=yes ;;
+    *) usage ;;
+  esac
+  [[ -d $dir ]] || fail "no existe trees/issue-$number"
+  case $PWD/ in
+    "$dir"/*) fail "sal del worktree antes de borrarlo" ;;
+  esac
+  if [[ $force == no ]]; then
+    [[ -z $(git -C "$dir" status --porcelain) ]] || fail "trees/issue-$number tiene cambios sin registrar (--force los descarta)"
+    [[ -z $(git -C "$dir" rev-list HEAD --not --remotes) ]] || fail "trees/issue-$number tiene commits que no están en ningún remoto (--force los descarta)"
+  fi
+  branch=$(git -C "$dir" symbolic-ref --quiet --short HEAD)
+  # Las variables del worktree que se borra, no las de quien lo ejecuta.
+  unset COMPOSE_PROJECT_NAME APP_PORT E2E_PORT DB_PORT
+  # shellcheck disable=SC1091
+  [[ -f $dir/.env ]] && { set -a; . "$dir/.env"; set +a; }
+
+  pids=$(worktree_processes)
+  # $pids va sin comillas a propósito: una lista de PID separados por espacios.
+  # shellcheck disable=SC2086
+  if [[ -n $pids ]]; then
+    kill $pids 2> /dev/null
+    sleep 2
+    pids=$(worktree_processes)
+    [[ -z $pids ]] || kill -9 $pids 2> /dev/null
+  fi
+  if [[ -n ${COMPOSE_PROJECT_NAME:-} ]]; then
+    (cd "$dir" && docker compose down --volumes --rmi local --remove-orphans) || fail "no se puede borrar el entorno de Docker de trees/issue-$number"
+  fi
+  if command -v playwright-cli > /dev/null; then
+    (cd "$dir" && playwright-cli -s="issue-$number" close) > /dev/null 2>&1
+  fi
+  [[ $force == yes ]] && args=(--force)
+  git -C "$root" worktree remove ${args[@]+"${args[@]}"} "$dir" || fail "no se puede borrar el worktree"
+  if [[ -n $branch ]]; then
+    git -C "$root" branch --quiet -D "$branch" || fail "no se puede borrar la rama $branch"
+  fi
+  echo "Borrado trees/issue-$number${branch:+ y la rama $branch}"
+}
+
+shift 2
+case $command in
+  create) create "$@" ;;
+  remove) remove "$@" ;;
+  *) usage ;;
+esac

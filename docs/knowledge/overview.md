@@ -69,7 +69,8 @@ Los formularios envían `PUT` y `DELETE` como `POST` con el campo `_method`.
 | --- | --- | --- |
 | `GO_ENV` | El entorno: `development`, `test` o `production`. Elige la base de datos de `database.yml` | `development` |
 | `DB_HOST` | El servidor de PostgreSQL en desarrollo y test | `127.0.0.1` |
+| `DB_PORT` | Su puerto | `5432` |
 | `DATABASE_URL` | La conexión en producción | Una local a `todo_production` |
 | `ADDR`, `PORT` | Dónde escucha la aplicación | Los de Buffalo; en la imagen de Docker, `0.0.0.0` y `3000` |
 
-Cómo se arranca y se prueba está en [../procedures/development.md](../procedures/development.md).
+Cómo se arranca y se prueba, también varios entornos a la vez, está en [../procedures/development.md](../procedures/development.md).

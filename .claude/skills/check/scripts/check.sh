@@ -23,6 +23,10 @@ set -o pipefail
 all=(gofmt vet migrate test build e2e docker)
 root=$(git rev-parse --show-toplevel) || exit 2
 cd "$root" || exit 2
+# En un worktree de bin/tree, su .env da los puertos y el proyecto de Compose. go test y Playwright
+# no lo leen solos: se exporta para todo lo que se ejecute desde aquí.
+# shellcheck disable=SC1091
+[[ -f .env ]] && { set -a; . ./.env; set +a; }
 
 usage() {
   echo "uso: check.sh [--out <directorio en .adw/>] [${all[*]}]" >&2
@@ -138,18 +142,19 @@ environment_error() { # <gate> <salida>
 }
 
 # migrate, test y e2e usan la base de datos del entorno de este proyecto: la del servicio db de
-# compose.yaml. Si el 5432 es de otro proyecto, no se toca. Con DB_HOST, se usa ese servidor.
+# compose.yaml, en DB_PORT (5432 en el checkout principal). Si el puerto es de otro proyecto, no se
+# toca. Con DB_HOST, se usa ese servidor.
 test_db_problem() {
   if [[ -z ${DB_HOST:-} ]] && ! docker compose ps --status running --services 2> /dev/null | grep -qx db; then
     echo "El servicio db de este proyecto no está en marcha (docker compose ps). Arranca el entorno (env:start)."
   elif ! db_reachable; then
-    echo "La base de datos de test no responde en ${DB_HOST:-127.0.0.1}:5432. Arranca el entorno (env:start)."
+    echo "La base de datos de test no responde en ${DB_HOST:-127.0.0.1}:${DB_PORT:-5432}. Arranca el entorno (env:start)."
   fi
 }
 
 # Si el host no contesta, /dev/tcp espera al timeout de TCP: se corta a los 3 segundos.
 db_reachable() {
-  (exec 3<>"/dev/tcp/${DB_HOST:-127.0.0.1}/5432") 2>/dev/null &
+  (exec 3<>"/dev/tcp/${DB_HOST:-127.0.0.1}/${DB_PORT:-5432}") 2>/dev/null &
   local pid=$! tries=0
   while kill -0 "$pid" 2>/dev/null; do
     if ((tries++ >= 15)); then
