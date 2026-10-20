@@ -25,3 +25,8 @@ Entre tres y cinco condiciones por documento, y las entradas en orden por númer
   - Cuando se cambie la protección CSRF o los campos que envía el formulario de una tarea
   - Cuando se investigue una tarea que cambia en pantalla pero vuelve a su estado al recargar
   - Cuando se escriban tests de navegador en `e2e/tareas/` que dependan de recargar la página
+- [feature-25-la-pestana-del-navegador-dice-mis-tareas.md](feature-25-la-pestana-del-navegador-dice-mis-tareas.md): el título del documento (`<title>`) de la plantilla común pasa a «Mis tareas», con el encabezado de la lista en «Tareas»
+  - Cuando se trabaje con `templates/application.plush.html`, en concreto con su etiqueta `<title>`
+  - Cuando se modifiquen los textos «Tareas» o «Mis tareas» de la lista, la navegación lateral o la edición
+  - Cuando se escriban tests de acción en `actions/tasks_test.go` que comprueben el título de la página o su encabezado
+  - Cuando se investigue qué texto sale en la pestaña del navegador, o si las páginas de error de Buffalo usan la plantilla común

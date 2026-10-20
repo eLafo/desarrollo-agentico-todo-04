@@ -237,3 +237,41 @@ func (as *ActionSuite) Test_TasksUpdate_InvalidID() {
 	res := as.HTML("/tasks/no-es-un-uuid").Put(url.Values{"title": {"Título nuevo"}})
 	as.Equal(404, res.Code)
 }
+
+// assertPageTitle comprueba que la página tiene una sola etiqueta <title> y que dice exactamente «Mis tareas».
+func (as *ActionSuite) assertPageTitle(body string) {
+	as.Equal(1, strings.Count(body, "<title>"))
+	as.Contains(body, "<title>Mis tareas</title>")
+}
+
+func (as *ActionSuite) Test_TasksIndex_PageTitle() {
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.assertPageTitle(res.Body.String())
+}
+
+func (as *ActionSuite) Test_TasksIndex_Heading() {
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), "<h1>Tareas</h1>")
+}
+
+func (as *ActionSuite) Test_TasksCreate_Invalid_PageTitle() {
+	res := as.HTML("/tasks").Post(&models.Task{Title: ""})
+	as.Equal(422, res.Code)
+	as.assertPageTitle(res.Body.String())
+}
+
+func (as *ActionSuite) Test_TasksEdit_PageTitle() {
+	task := as.taskForEditing(false)
+	res := as.HTML("/tasks/%s/edit", task.ID).Get()
+	as.Equal(200, res.Code)
+	as.assertPageTitle(res.Body.String())
+}
+
+func (as *ActionSuite) Test_TasksUpdate_Invalid_PageTitle() {
+	task := as.taskForEditing(false)
+	res := as.HTML("/tasks/%s", task.ID).Put(url.Values{"title": {""}})
+	as.Equal(422, res.Code)
+	as.assertPageTitle(res.Body.String())
+}

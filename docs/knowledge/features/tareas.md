@@ -1,10 +1,10 @@
 # Lista de tareas
 
-Lo que ve y puede hacer el usuario con sus tareas. Todo pasa en dos pantallas: la lista (`/`) y la edición de una tarea (`/tasks/{task_id}/edit`). El código está en `actions/tasks.go`, `models/task.go`, `templates/tasks/` y `public/assets/app.js`.
+Lo que ve y puede hacer el usuario con sus tareas. Todo pasa en dos pantallas: la lista (`/`) y la edición de una tarea (`/tasks/{task_id}/edit`). En las dos, la pestaña del navegador dice «Mis tareas». El código está en `actions/tasks.go`, `models/task.go`, `templates/tasks/` y `public/assets/app.js`.
 
 ## La lista
 
-- La pestaña y el enlace de la navegación lateral dicen «Tareas». El título de la página también.
+- El enlace de la navegación lateral y el título que encabeza la lista dicen «Tareas».
 - Debajo del título, el número de tareas: «3 tareas en tu lista», y en singular «1 tarea en tu lista».
 - Las tareas salen por orden de creación, de la más antigua a la más reciente.
 - Cada tarea muestra:
