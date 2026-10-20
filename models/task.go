@@ -25,6 +25,17 @@ type Task struct {
 // Tasks es una colección de Task.
 type Tasks []Task
 
+// Pending devuelve cuántas tareas de la colección están sin completar.
+func (t Tasks) Pending() int {
+	pending := 0
+	for _, task := range t {
+		if !task.Completed {
+			pending++
+		}
+	}
+	return pending
+}
+
 // Validate se ejecuta en cada llamada a los métodos "pop.Validate*".
 func (t *Task) Validate(tx *pop.Connection) (*validate.Errors, error) {
 	verrs := validate.NewErrors()

@@ -13,6 +13,6 @@ test.describe('Tareas', () => {
     await expect(page.getByRole('status')).toHaveText('Tarea creada.');
     await expect(page.locator('.task-title')).toHaveText(['Comprar pan']);
     await expect(page.getByRole('button', { name: 'Completar tarea: Comprar pan' })).toBeVisible();
-    await expect(page.locator('.list-count')).toHaveText('1 tarea en tu lista');
+    await expect(page.locator('.list-count')).toHaveText('1 pendiente de 1 tarea');
   });
 });

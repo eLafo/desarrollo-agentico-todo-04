@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -21,6 +22,8 @@ func TasksIndex(c buffalo.Context) error {
 	}
 
 	c.Set("tasks", tasks)
+	c.Set("pendingCount", tasks.Pending())
+	c.Set("listCountSuffix", listCountSuffix(tasks))
 	c.Set("task", &models.Task{})
 	c.Set("errors", validate.NewErrors())
 	return c.Render(http.StatusOK, r.HTML("tasks/index.plush.html"))
@@ -48,6 +51,8 @@ func TasksCreate(c buffalo.Context) error {
 		}
 
 		c.Set("tasks", tasks)
+		c.Set("pendingCount", tasks.Pending())
+		c.Set("listCountSuffix", listCountSuffix(tasks))
 		c.Set("task", task)
 		c.Set("errors", verrs)
 		return c.Render(http.StatusUnprocessableEntity, r.HTML("tasks/index.plush.html"))
@@ -134,4 +139,19 @@ func TasksDestroy(c buffalo.Context) error {
 
 	c.Flash().Add("success", "Tarea eliminada.")
 	return c.Redirect(http.StatusSeeOther, "/")
+}
+
+// listCountSuffix compone el texto que sigue al número de pendientes en la cabecera de la
+// lista, como «pendientes de 3 tareas» en «2 pendientes de 3 tareas», con el singular y el
+// plural de cada parte por separado.
+func listCountSuffix(tasks models.Tasks) string {
+	pendingWord := "pendientes"
+	if tasks.Pending() == 1 {
+		pendingWord = "pendiente"
+	}
+	taskWord := "tareas"
+	if len(tasks) == 1 {
+		taskWord = "tarea"
+	}
+	return fmt.Sprintf("%s de %d %s", pendingWord, len(tasks), taskWord)
 }

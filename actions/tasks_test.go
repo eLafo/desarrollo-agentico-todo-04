@@ -1,6 +1,7 @@
 package actions
 
 import (
+	"fmt"
 	"net/url"
 	"strings"
 
@@ -116,6 +117,16 @@ func (as *ActionSuite) taskForEditing(completed bool) *models.Task {
 	as.False(verrs.HasAny())
 	as.NoError(as.DB.Reload(task))
 	return task
+}
+
+// createTasks crea una tarea por valor, en orden: true es completada y false, pendiente.
+func (as *ActionSuite) createTasks(completed ...bool) {
+	for i, c := range completed {
+		task := &models.Task{Title: fmt.Sprintf("Tarea %d", i+1), Completed: c}
+		verrs, err := as.DB.ValidateAndCreate(task)
+		as.NoError(err)
+		as.False(verrs.HasAny())
+	}
 }
 
 func (as *ActionSuite) Test_TasksIndex_EditLink() {
@@ -236,4 +247,127 @@ func (as *ActionSuite) Test_TasksUpdate_NotFound() {
 func (as *ActionSuite) Test_TasksUpdate_InvalidID() {
 	res := as.HTML("/tasks/no-es-un-uuid").Put(url.Values{"title": {"Título nuevo"}})
 	as.Equal(404, res.Code)
+}
+
+func (as *ActionSuite) Test_TasksIndex_ListCount() {
+	as.LoadFixture("tres tareas")
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+
+	body := res.Body.String()
+	as.Contains(body, `<p class="list-count"><strong>2</strong> pendientes de 3 tareas</p>`)
+	as.NotContains(body, "en tu lista")
+}
+
+func (as *ActionSuite) Test_TasksIndex_ListCount_Singular() {
+	as.createTasks(false)
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>1</strong> pendiente de 1 tarea</p>`)
+}
+
+func (as *ActionSuite) Test_TasksIndex_ListCount_OnePendingOfSeveral() {
+	as.createTasks(false, true, true)
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>1</strong> pendiente de 3 tareas</p>`)
+}
+
+func (as *ActionSuite) Test_TasksIndex_ListCount_NonePendingOfOne() {
+	as.createTasks(true)
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>0</strong> pendientes de 1 tarea</p>`)
+}
+
+func (as *ActionSuite) Test_TasksIndex_ListCount_AllCompleted() {
+	as.createTasks(true, true, true)
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>0</strong> pendientes de 3 tareas</p>`)
+}
+
+func (as *ActionSuite) Test_TasksIndex_EmptyState_HidesListCount() {
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+
+	body := res.Body.String()
+	as.Contains(body, "No hay tareas todavía")
+	as.NotContains(body, "list-count")
+	as.NotContains(body, "pendiente")
+}
+
+func (as *ActionSuite) Test_TasksCreate_CountsAsPending() {
+	as.LoadFixture("tres tareas")
+
+	res := as.HTML("/tasks").Post(&models.Task{Title: "Preparar la reunión"})
+	as.Equal(303, res.Code)
+
+	res = as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>3</strong> pendientes de 4 tareas</p>`)
+}
+
+func (as *ActionSuite) Test_TasksCreate_Invalid_KeepsListCount() {
+	as.LoadFixture("tres tareas")
+
+	res := as.HTML("/tasks").Post(&models.Task{Title: ""})
+	as.Equal(422, res.Code)
+
+	body := res.Body.String()
+	as.Contains(body, "El título es obligatorio.")
+	as.Contains(body, `<p class="list-count"><strong>2</strong> pendientes de 3 tareas</p>`)
+}
+
+func (as *ActionSuite) Test_TasksToggle_UpdatesListCount() {
+	as.LoadFixture("tres tareas")
+	task := &models.Task{}
+	as.NoError(as.DB.Where("title = ?", "Llamar al gestor").First(task))
+
+	res := as.HTML("/tasks/%s/toggle", task.ID).Put(url.Values{})
+	as.Equal(303, res.Code)
+	res = as.HTML("/").Get()
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>1</strong> pendiente de 3 tareas</p>`)
+
+	res = as.HTML("/tasks/%s/toggle", task.ID).Put(url.Values{})
+	as.Equal(303, res.Code)
+	res = as.HTML("/").Get()
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>2</strong> pendientes de 3 tareas</p>`)
+}
+
+func (as *ActionSuite) Test_TasksDestroy_DiscountsTask() {
+	as.LoadFixture("tres tareas")
+	task := &models.Task{}
+	as.NoError(as.DB.Where("title = ?", "Llamar al gestor").First(task))
+
+	res := as.HTML("/tasks/%s", task.ID).Delete()
+	as.Equal(303, res.Code)
+
+	res = as.HTML("/").Get()
+	as.Contains(res.Body.String(), `<p class="list-count"><strong>1</strong> pendiente de 2 tareas</p>`)
+}
+
+func (as *ActionSuite) Test_TasksDestroy_LastTask_HidesListCount() {
+	as.createTasks(false)
+	task := &models.Task{}
+	as.NoError(as.DB.First(task))
+
+	res := as.HTML("/tasks/%s", task.ID).Delete()
+	as.Equal(303, res.Code)
+
+	res = as.HTML("/").Get()
+	body := res.Body.String()
+	as.Contains(body, "No hay tareas todavía")
+	as.NotContains(body, "list-count")
+}
+
+func (as *ActionSuite) Test_TasksIndex_Heading() {
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), "<h1>Mis tareas</h1>")
 }
