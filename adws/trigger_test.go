@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"path"
 	"path/filepath"
 	"reflect"
+	"strconv"
 	"strings"
 	"testing"
 	"time"
@@ -29,11 +31,16 @@ func snapshot(url string, labels []string, assignees ...string) string {
 	type user struct {
 		Login string `json:"login"`
 	}
+	number, err := strconv.Atoi(path.Base(url))
+	if err != nil {
+		panic(err)
+	}
 	it := struct {
 		URL       string  `json:"url"`
+		Number    int     `json:"number"`
 		Labels    []label `json:"labels"`
 		Assignees []user  `json:"assignees"`
-	}{URL: url, Labels: []label{{Name: "adw"}}, Assignees: []user{}}
+	}{URL: url, Number: number, Labels: []label{{Name: "adw"}}, Assignees: []user{}}
 	for _, name := range labels {
 		it.Labels = append(it.Labels, label{Name: name})
 	}
@@ -49,6 +56,10 @@ func snapshot(url string, labels []string, assignees ...string) string {
 
 func list(snapshots ...string) string {
 	return "[" + strings.Join(snapshots, ",") + "]\n"
+}
+
+func issueURL(number int) string {
+	return fmt.Sprintf("https://github.com/example/todo/issues/%d", number)
 }
 
 var (
@@ -72,57 +83,152 @@ func TestTriggerHelperProcess(t *testing.T) {
 	os.Exit(90)
 }
 
-func runTrigger(t *testing.T, issues, configBody string, env []string, args ...string) (string, string, string, error) {
-	t.Helper()
-	project, err := filepath.Abs("..")
-	if err != nil {
-		t.Fatal(err)
-	}
-	root := t.TempDir()
-	write := func(name, body string) {
-		t.Helper()
-		if err := os.WriteFile(filepath.Join(root, name), []byte(body), 0o700); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if configBody == "" {
-		configBody = defaultConfig
-	}
-	write("adw.yml", configBody)
-	write("issues", issues)
-	write("gh", `#!/usr/bin/env bash
+// Los ejecutables simulados. Escriben lo que les pasa en ficheros de TEST_ROOT:
+//   - events: START y END de cada sesión, SLEEP de cada espera y REMOVE de cada borrado;
+//   - gh-args: los argumentos de la última consulta de issues;
+//   - sessions: el directorio y el puerto de cada sesión;
+//   - tree-log: las órdenes de bin/tree.
+const (
+	fakeGH = `#!/usr/bin/env bash
 set -euo pipefail
 if [[ "$*" == "api user --jq .login" ]]; then
   [[ "${TEST_GH_USER_EXIT:-0}" == 0 ]] || exit "$TEST_GH_USER_EXIT"
   printf 'agente\n'
   exit 0
 fi
+if [[ "$1 $2" == "issue view" ]]; then
+  printf '%s\n' "$*" >> "$TEST_ROOT/gh-views"
+  cat "$TEST_ROOT/state-$3" 2>/dev/null || printf 'OPEN\n'
+  exit 0
+fi
 printf '%s\n' "$@" > "$TEST_ROOT/gh-args"
 [[ "${TEST_GH_EXIT:-0}" == 0 ]] || exit "$TEST_GH_EXIT"
-cat "$TEST_ROOT/issues"
-`)
-	write("claude", `#!/usr/bin/env bash
+calls=$(( $(cat "$TEST_ROOT/list-calls" 2>/dev/null || echo 0) + 1 ))
+echo "$calls" > "$TEST_ROOT/list-calls"
+if [[ -f "$TEST_ROOT/issues.$calls" ]]; then cat "$TEST_ROOT/issues.$calls"; else cat "$TEST_ROOT/issues"; fi
+`
+	fakeClaude = `#!/usr/bin/env bash
 set -euo pipefail
 [[ $# == 4 && "$1" == -p && "$3" == --permission-prompts && "$4" == none ]] || exit 90
 if IFS= read -r unexpected; then exit 91; fi
 [[ "${CLAUDE_CODE_PRINT_BG_WAIT_CEILING_MS:-}" == 0 ]] || exit 92
 printf 'START:%s\n' "$2" >> "$TEST_ROOT/events"
 printf '%s' "$PWD" > "$TEST_ROOT/cwd"
+printf 'CWD:%s APP_PORT:%s\n' "$PWD" "${APP_PORT:-}" >> "$TEST_ROOT/sessions"
+echo "hola desde $(basename "$PWD")"
 [[ "${TEST_CLAUDE_EXIT:-0}" == 0 ]] || exit "$TEST_CLAUDE_EXIT"
-/bin/sleep 0.02
+[[ "${TEST_CLAUDE_FAIL_IN:-}" != "$(basename "$PWD")" ]] || exit 9
+# Espera a que haya TEST_CLAUDE_PEERS sesiones empezadas: solo pasa si van en paralelo.
+for _ in $(seq 1 250); do
+  [[ $(grep -c '^START:' "$TEST_ROOT/events") -ge ${TEST_CLAUDE_PEERS:-1} ]] && break
+  /bin/sleep 0.02
+done
+[[ $(grep -c '^START:' "$TEST_ROOT/events") -ge ${TEST_CLAUDE_PEERS:-1} ]] || exit 95
+# Con TEST_CLAUDE_HOLD, sigue en marcha hasta que exista el fichero release.
+if [[ -n "${TEST_CLAUDE_HOLD:-}" ]]; then
+  until [[ -f "$TEST_ROOT/release" ]]; do /bin/sleep 0.02; done
+fi
+/bin/sleep "${TEST_CLAUDE_SLEEP:-0.02}"
 printf 'END:%s\n' "$2" >> "$TEST_ROOT/events"
-`)
-	write("git", `#!/usr/bin/env bash
+`
+	fakeGit = `#!/usr/bin/env bash
 set -euo pipefail
-[[ "$*" == "status --porcelain" ]] || exit 90
-[[ "${TEST_GIT_DIRTY:-0}" == 0 ]] || printf ' M main.go\n'
-`)
-	write("sleep", `#!/usr/bin/env bash
+if [[ "$*" == "rev-parse --show-toplevel" ]]; then
+  printf '%s\n' "$TEST_ROOT"
+  exit 0
+fi
+[[ $# == 4 && "$1" == -C && "$3 $4" == "status --porcelain" ]] || exit 90
+[[ "${TEST_GIT_DIRTY:-}" != "$(basename "$2")" ]] || printf ' M main.go\n'
+`
+	fakeTree = `#!/usr/bin/env bash
+set -euo pipefail
+printf '%s\n' "$*" >> "$TEST_ROOT/tree-log"
+dir="$TEST_ROOT/trees/issue-$2"
+case $1 in
+  create)
+    mkdir -p "$dir"
+    [[ -f "$dir/.env" ]] || printf '# generado\nCOMPOSE_PROJECT_NAME=todo-issue-%s\nAPP_PORT=%s\n' "$2" $((13000 + $2)) > "$dir/.env"
+    printf '%s\n' "$dir"
+    ;;
+  remove)
+    if [[ "${TEST_TREE_REMOVE_FAIL:-}" == "$2" ]]; then
+      echo "bin/tree: trees/issue-$2 tiene cambios sin registrar (--force los descarta)" >&2
+      exit 1
+    fi
+    rm -rf "$dir"
+    printf 'REMOVE:%s\n' "$2" >> "$TEST_ROOT/events"
+    echo "Borrado trees/issue-$2"
+    ;;
+esac
+`
+	// Por defecto, la primera espera vuelve y la segunda termina el trigger con 73. Con
+	// TEST_SLEEP_RELEASE, la segunda suelta las sesiones retenidas y espera a que acabe una, y es
+	// la tercera la que termina.
+	fakeSleep = `#!/usr/bin/env bash
 set -euo pipefail
 printf 'SLEEP:%s\n' "$1" >> "$TEST_ROOT/events"
-if [[ -f "$TEST_ROOT/slept" ]]; then exit 73; fi
-touch "$TEST_ROOT/slept"
-`)
+calls=$(( $(cat "$TEST_ROOT/sleep-calls" 2>/dev/null || echo 0) + 1 ))
+echo "$calls" > "$TEST_ROOT/sleep-calls"
+last=2
+[[ -z "${TEST_SLEEP_RELEASE:-}" ]] || last=3
+if [[ -n "${TEST_SLEEP_RELEASE:-}" && $calls == 2 ]]; then
+  touch "$TEST_ROOT/release"
+  until grep -q '^END:' "$TEST_ROOT/events"; do /bin/sleep 0.02; done
+  /bin/sleep 0.3 # a que el trigger recoja la sesión
+fi
+if (( calls >= last )); then exit 73; fi
+`
+)
+
+type result struct {
+	output, events, args string
+	err                  error
+}
+
+func runTrigger(t *testing.T, issues, configBody string, env []string, args ...string) (string, string, string, error) {
+	t.Helper()
+	r := runTriggerIn(t, t.TempDir(), issues, configBody, env, args...)
+	return r.output, r.events, r.args, r.err
+}
+
+func writeFile(t *testing.T, name, body string) {
+	t.Helper()
+	if err := os.MkdirAll(filepath.Dir(name), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	if err := os.WriteFile(name, []byte(body), 0o700); err != nil {
+		t.Fatal(err)
+	}
+}
+
+func readFile(t *testing.T, name string) string {
+	t.Helper()
+	data, err := os.ReadFile(name)
+	if os.IsNotExist(err) {
+		return ""
+	}
+	if err != nil {
+		t.Fatal(err)
+	}
+	return string(data)
+}
+
+func runTriggerIn(t *testing.T, root, issues, configBody string, env []string, args ...string) result {
+	t.Helper()
+	project, err := filepath.Abs("..")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if configBody == "" {
+		configBody = defaultConfig
+	}
+	writeFile(t, filepath.Join(root, "adw.yml"), configBody)
+	writeFile(t, filepath.Join(root, "issues"), issues)
+	writeFile(t, filepath.Join(root, "fake", "gh"), fakeGH)
+	writeFile(t, filepath.Join(root, "fake", "claude"), fakeClaude)
+	writeFile(t, filepath.Join(root, "fake", "git"), fakeGit)
+	writeFile(t, filepath.Join(root, "fake", "sleep"), fakeSleep)
+	writeFile(t, filepath.Join(root, "bin", "tree"), fakeTree)
 	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
 	defer cancel()
 	childArgs := []string{"-test.run=^TestTriggerHelperProcess$", "--", "--config", filepath.Join(root, "adw.yml")}
@@ -136,7 +242,7 @@ touch "$TEST_ROOT/slept"
 		}
 	}
 	cmd.Env = append(os.Environ(),
-		"PATH="+root+string(os.PathListSeparator)+os.Getenv("PATH"),
+		"PATH="+filepath.Join(root, "fake")+string(os.PathListSeparator)+os.Getenv("PATH"),
 		"TEST_ROOT="+root, "TEST_TRIGGER_HELPER=1", "TEST_GH_EXIT=0", "TEST_CLAUDE_EXIT=0",
 	)
 	cmd.Env = append(cmd.Env, env...)
@@ -144,21 +250,39 @@ touch "$TEST_ROOT/slept"
 	if ctx.Err() != nil {
 		t.Fatalf("trigger exceeded test timeout: %s", output)
 	}
-	read := func(name string) string {
-		t.Helper()
-		data, err := os.ReadFile(filepath.Join(root, name))
-		if os.IsNotExist(err) {
-			return ""
-		}
-		if err != nil {
-			t.Fatal(err)
-		}
-		return string(data)
+	if cwd := readFile(t, filepath.Join(root, "cwd")); cwd != "" && !strings.HasPrefix(cwd, filepath.Join(root, "trees", "issue-")) {
+		t.Fatalf("claude must run in the worktree of its case, not in %s", cwd)
 	}
-	if cwd := read("cwd"); cwd != "" && cwd != project {
-		t.Fatalf("unexpected working directory: %s", cwd)
+	return result{string(output), readFile(t, filepath.Join(root, "events")), readFile(t, filepath.Join(root, "gh-args")), runErr}
+}
+
+// withoutSleeps quita las esperas de los eventos: en modo continuo, las sesiones corren mientras
+// el trigger espera, y el orden entre unas y otras no está fijado.
+func withoutSleeps(events string) string {
+	var kept []string
+	for _, line := range strings.Split(strings.TrimSpace(events), "\n") {
+		if !strings.HasPrefix(line, "SLEEP:") {
+			kept = append(kept, line)
+		}
 	}
-	return string(output), read("events"), read("gh-args"), runErr
+	return strings.Join(kept, "\n")
+}
+
+// maxOverlap cuenta el máximo de sesiones en marcha a la vez según los eventos.
+func maxOverlap(events string) int {
+	running, max := 0, 0
+	for _, line := range strings.Split(events, "\n") {
+		switch {
+		case strings.HasPrefix(line, "START:"):
+			running++
+		case strings.HasPrefix(line, "END:"):
+			running--
+		}
+		if running > max {
+			max = running
+		}
+	}
+	return max
 }
 
 func TestTriggerOnceRunsIssuesInSequence(t *testing.T) {
@@ -172,7 +296,51 @@ func TestTriggerOnceRunsIssuesInSequence(t *testing.T) {
 	}
 	want := "START:/adw " + newSnapshot + "\nEND:/adw " + newSnapshot + "\nSTART:/adw " + oldSnapshot + "\nEND:/adw " + oldSnapshot + "\n"
 	if events != want {
-		t.Fatalf("want sequential invocations %q, got %q", want, events)
+		t.Fatalf("with max_parallel 1 (the default), want sequential invocations %q, got %q", want, events)
+	}
+}
+
+func TestTriggerRunsEachCaseInItsWorktree(t *testing.T) {
+	root := t.TempDir()
+	r := runTriggerIn(t, root, list(newSnapshot, oldSnapshot), "", nil, "--once")
+	if r.err != nil {
+		t.Fatalf("%v: %s", r.err, r.output)
+	}
+	sessions := readFile(t, filepath.Join(root, "sessions"))
+	for _, n := range []int{12, 3} {
+		want := fmt.Sprintf("CWD:%s APP_PORT:%d\n", filepath.Join(root, "trees", fmt.Sprintf("issue-%d", n)), 13000+n)
+		if !strings.Contains(sessions, want) {
+			t.Fatalf("each session must run in its worktree with the variables of its .env: want %q in %q", want, sessions)
+		}
+		if line := fmt.Sprintf("[#%d] hola desde issue-%d\n", n, n); !strings.Contains(r.output, line) {
+			t.Fatalf("each session's output must be prefixed with its issue: want %q in %s", line, r.output)
+		}
+	}
+	if log := readFile(t, filepath.Join(root, "tree-log")); log != "create 12\ncreate 3\n" {
+		t.Fatalf("the worktree of each case must be created with bin/tree before its session: %q", log)
+	}
+}
+
+func TestTriggerRunsCasesInParallel(t *testing.T) {
+	body := defaultConfig + "max_parallel: 2\n"
+	output, events, _, err := runTrigger(t, list(newSnapshot, oldSnapshot), body, []string{"TEST_CLAUDE_PEERS=2"}, "--once")
+	if err != nil {
+		t.Fatalf("with max_parallel 2, both sessions must run at the same time: %v: %s", err, output)
+	}
+	if maxOverlap(events) != 2 {
+		t.Fatalf("want two sessions at once: %q", events)
+	}
+}
+
+func TestTriggerCapsParallelSessions(t *testing.T) {
+	body := defaultConfig + "max_parallel: 2\n"
+	issues := list(newSnapshot, oldSnapshot, snapshot(issueURL(7), nil))
+	output, events, _, err := runTrigger(t, issues, body, []string{"TEST_CLAUDE_SLEEP=0.3"}, "--once")
+	if err != nil {
+		t.Fatalf("%v: %s", err, output)
+	}
+	if strings.Count(events, "END:") != 3 || maxOverlap(events) != 2 {
+		t.Fatalf("--once must run every case, never more than max_parallel at once: %q", events)
 	}
 }
 
@@ -246,8 +414,7 @@ prompt: >-
 	}
 	template := `/mi-flujo {{payload}} --remote origin; $(exit 99) "{{payload}}"`
 	prompt := strings.ReplaceAll(template, "{{payload}}", newSnapshot)
-	pass := "START:" + prompt + "\nEND:" + prompt + "\nSLEEP:7\n"
-	if events != pass+pass || !strings.Contains(args, "--label\nmi-etiqueta\n") {
+	if !strings.Contains(events, "START:"+prompt+"\n") || !strings.Contains(events, "END:"+prompt+"\n") || strings.Count(events, "SLEEP:7\n") != 2 || !strings.Contains(args, "--label\nmi-etiqueta\n") {
 		t.Fatalf("YAML config must control the literal prompt, label and interval: %q, %q", events, args)
 	}
 }
@@ -273,26 +440,27 @@ func TestTriggerEmptyListDoesNotInvokeClaude(t *testing.T) {
 
 func TestTriggerOnlyLaunchesCasesInAgentTurn(t *testing.T) {
 	issues := list(
-		snapshot("https://github.com/example/todo/issues/1", []string{"adw:waiting-for-human"}),
-		snapshot("https://github.com/example/todo/issues/2", []string{"stage:planning"}),
-		snapshot("https://github.com/example/todo/issues/3", nil, "otra-cuenta"),
-		snapshot("https://github.com/example/todo/issues/4", nil, "agente", "otra-cuenta"),
-		snapshot("https://github.com/example/todo/issues/5", []string{"feature", "plan:ready"}, "Agente"),
-		snapshot("https://github.com/example/todo/issues/6", []string{"issue:failed"}),
+		snapshot(issueURL(1), []string{"adw:waiting-for-human"}),
+		snapshot(issueURL(2), []string{"stage:planning"}),
+		snapshot(issueURL(3), nil, "otra-cuenta"),
+		snapshot(issueURL(4), nil, "agente", "otra-cuenta"),
+		snapshot(issueURL(5), []string{"feature", "plan:ready"}, "Agente"),
+		snapshot(issueURL(6), []string{"issue:failed"}),
 	)
 	output, events, _, err := runTrigger(t, issues, "", nil, "--once")
-	mine := snapshot("https://github.com/example/todo/issues/5", []string{"feature", "plan:ready"}, "Agente")
-	free := snapshot("https://github.com/example/todo/issues/6", []string{"issue:failed"})
+	mine := snapshot(issueURL(5), []string{"feature", "plan:ready"}, "Agente")
+	free := snapshot(issueURL(6), []string{"issue:failed"})
 	want := "START:/adw " + mine + "\nEND:/adw " + mine + "\nSTART:/adw " + free + "\nEND:/adw " + free + "\n"
 	if err != nil || events != want {
 		t.Fatalf("only free or own cases without waiting or stage labels must launch: err=%v, events=%q, output=%s", err, events, output)
 	}
 }
 
-func TestTriggerStopsOnDirtyCheckout(t *testing.T) {
-	output, events, _, err := runTrigger(t, list(newSnapshot), "", []string{"TEST_GIT_DIRTY=1"}, "--once")
-	if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 2 || events != "" || !strings.Contains(output, "checkout") {
-		t.Fatalf("a dirty checkout must stop before Claude: err=%v, events=%q, output=%s", err, events, output)
+func TestTriggerSkipsDirtyWorktree(t *testing.T) {
+	output, events, _, err := runTrigger(t, list(newSnapshot, oldSnapshot), "", []string{"TEST_GIT_DIRTY=issue-12"}, "--once")
+	want := "START:/adw " + oldSnapshot + "\nEND:/adw " + oldSnapshot + "\n"
+	if err != nil || events != want || !strings.Contains(output, "[#12] ") || !strings.Contains(output, "cambios sin registrar") {
+		t.Fatalf("a dirty worktree must skip its case and let the others run: err=%v, events=%q, output=%s", err, events, output)
 	}
 }
 
@@ -317,14 +485,83 @@ func TestTriggerStopsOnClaudeError(t *testing.T) {
 	}
 }
 
-func TestTriggerPollsWithoutRememberingIssues(t *testing.T) {
-	_, events, _, err := runTrigger(t, list(newSnapshot), "", nil)
+func TestTriggerSessionErrorWaitsForTheOthers(t *testing.T) {
+	body := defaultConfig + "max_parallel: 2\n"
+	issues := list(newSnapshot, oldSnapshot, snapshot(issueURL(7), nil))
+	output, events, _, err := runTrigger(t, issues, body, []string{"TEST_CLAUDE_FAIL_IN=issue-12", "TEST_CLAUDE_SLEEP=0.3"})
+	if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 9 {
+		t.Fatalf("a failed session must end the trigger with its exit code: %v: %s", err, output)
+	}
+	if !strings.Contains(events, "END:/adw "+oldSnapshot+"\n") || strings.Contains(events, "issues/7") {
+		t.Fatalf("after a failure, the trigger must wait for the running sessions and launch no more: %q", events)
+	}
+}
+
+func TestTriggerRemembersOnlyRunningSessions(t *testing.T) {
+	_, events, _, err := runTrigger(t, list(newSnapshot), "", []string{"TEST_CLAUDE_HOLD=1", "TEST_SLEEP_RELEASE=1"})
 	if exit, ok := err.(*exec.ExitError); !ok || exit.ExitCode() != 73 {
 		t.Fatalf("unexpected exit: %v", err)
 	}
-	pass := "START:/adw " + newSnapshot + "\nEND:/adw " + newSnapshot + "\nSLEEP:20\n"
-	if events != pass+pass {
-		t.Fatalf("this minimal trigger deliberately has no memory: %q", events)
+	session := "START:/adw " + newSnapshot + "\nEND:/adw " + newSnapshot
+	if withoutSleeps(events) != session+"\n"+session || strings.Count(events, "SLEEP:") != 3 {
+		t.Fatalf("a running case must not be launched again, and a finished one must: %q", events)
+	}
+}
+
+func TestTriggerRemovesWorktreesOfClosedIssues(t *testing.T) {
+	root := t.TempDir()
+	for _, dir := range []string{"issue-12", "issue-40", "issue-41", "notas"} {
+		if err := os.MkdirAll(filepath.Join(root, "trees", dir), 0o700); err != nil {
+			t.Fatal(err)
+		}
+	}
+	writeFile(t, filepath.Join(root, "state-40"), "CLOSED\n")
+	writeFile(t, filepath.Join(root, "state-41"), "OPEN\n")
+	r := runTriggerIn(t, root, list(newSnapshot), "", nil, "--once")
+	if r.err != nil {
+		t.Fatalf("%v: %s", r.err, r.output)
+	}
+	if log := readFile(t, filepath.Join(root, "tree-log")); log != "remove 40\ncreate 12\n" {
+		t.Fatalf("only the worktree of the closed issue must be removed, before launching: %q", log)
+	}
+	if views := readFile(t, filepath.Join(root, "gh-views")); strings.Contains(views, "view 12 ") || !strings.Contains(views, "view 40 --repo example/todo --json state --jq .state\n") {
+		t.Fatalf("the state is only asked for worktrees whose issue is not in the open list: %q", views)
+	}
+	if !strings.Contains(r.output, "[#40] issue cerrada: Borrado trees/issue-40\n") {
+		t.Fatalf("the removal must be reported: %s", r.output)
+	}
+}
+
+func TestTriggerKeepsWorktreeOfRunningCase(t *testing.T) {
+	root := t.TempDir()
+	writeFile(t, filepath.Join(root, "issues.2"), "[]\n")
+	writeFile(t, filepath.Join(root, "issues.3"), "[]\n")
+	writeFile(t, filepath.Join(root, "state-12"), "CLOSED\n")
+	r := runTriggerIn(t, root, list(newSnapshot), "", []string{"TEST_CLAUDE_HOLD=1", "TEST_SLEEP_RELEASE=1"})
+	if exit, ok := r.err.(*exec.ExitError); !ok || exit.ExitCode() != 73 {
+		t.Fatalf("unexpected exit: %v: %s", r.err, r.output)
+	}
+	want := "START:/adw " + newSnapshot + "\nEND:/adw " + newSnapshot + "\nREMOVE:12"
+	if withoutSleeps(r.events) != want {
+		t.Fatalf("the worktree of a running case must be kept until its session ends: %q", r.events)
+	}
+}
+
+func TestTriggerWarnsOnceWhenWorktreeCannotBeRemoved(t *testing.T) {
+	root := t.TempDir()
+	if err := os.MkdirAll(filepath.Join(root, "trees", "issue-40"), 0o700); err != nil {
+		t.Fatal(err)
+	}
+	writeFile(t, filepath.Join(root, "state-40"), "CLOSED\n")
+	r := runTriggerIn(t, root, "[]\n", "", []string{"TEST_TREE_REMOVE_FAIL=40"})
+	if exit, ok := r.err.(*exec.ExitError); !ok || exit.ExitCode() != 73 {
+		t.Fatalf("a worktree that cannot be removed must not stop the trigger: %v: %s", r.err, r.output)
+	}
+	if log := readFile(t, filepath.Join(root, "tree-log")); log != "remove 40\nremove 40\n" {
+		t.Fatalf("the removal must be retried on each poll: %q", log)
+	}
+	if strings.Count(r.output, "[#40] issue cerrada, pero no se borra su worktree: bin/tree: trees/issue-40 tiene cambios sin registrar") != 1 {
+		t.Fatalf("the refusal must be reported once: %s", r.output)
 	}
 }
 
@@ -340,6 +577,9 @@ func TestTriggerInvalidConfigurationDoesNotLaunch(t *testing.T) {
 		{name: "zero-max-rejections", body: defaultConfig + "max_rejections: 0\n"},
 		{name: "negative-max-rejections", body: defaultConfig + "max_rejections: -2\n"},
 		{name: "non-integer-max-rejections", body: defaultConfig + "max_rejections: tres\n"},
+		{name: "zero-max-parallel", body: defaultConfig + "max_parallel: 0\n"},
+		{name: "negative-max-parallel", body: defaultConfig + "max_parallel: -1\n"},
+		{name: "non-integer-max-parallel", body: defaultConfig + "max_parallel: dos\n"},
 		{name: "missing-payload-marker", body: strings.Replace(defaultConfig, "{{payload}}", "", 1)},
 		{name: "old-issue-marker", body: strings.Replace(defaultConfig, "{{payload}}", "{{issue_url}}", 1)},
 		{name: "malformed-yaml", body: "repo: [\n"},
@@ -359,15 +599,16 @@ func TestTriggerInvalidConfigurationDoesNotLaunch(t *testing.T) {
 	}
 }
 
-func TestTriggerMaxRejections(t *testing.T) {
+func TestTriggerConfigDefaults(t *testing.T) {
 	cases := []struct {
-		name string
-		body string
-		want int
+		name           string
+		body           string
+		wantRejections int
+		wantParallel   int
 	}{
-		{name: "default", body: defaultConfig, want: 3},
-		{name: "loop-disabled", body: defaultConfig + "max_rejections: 1\n", want: 1},
-		{name: "configured", body: defaultConfig + "max_rejections: 5\n", want: 5},
+		{name: "default", body: defaultConfig, wantRejections: 3, wantParallel: 1},
+		{name: "loop-disabled", body: defaultConfig + "max_rejections: 1\n", wantRejections: 1, wantParallel: 1},
+		{name: "configured", body: defaultConfig + "max_rejections: 5\nmax_parallel: 3\n", wantRejections: 5, wantParallel: 3},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -377,12 +618,28 @@ func TestTriggerMaxRejections(t *testing.T) {
 			}
 			cfg, err := readConfig(path)
 			if err != nil {
-				t.Fatalf("max_rejections must accept integers from 1 and default to 3: %v", err)
+				t.Fatalf("max_rejections and max_parallel must accept integers from 1: %v", err)
 			}
-			if cfg.MaxRejections != tc.want {
-				t.Fatalf("want max_rejections %d, got %d", tc.want, cfg.MaxRejections)
+			if cfg.MaxRejections != tc.wantRejections || cfg.MaxParallel != tc.wantParallel {
+				t.Fatalf("want max_rejections %d and max_parallel %d, got %d and %d", tc.wantRejections, tc.wantParallel, cfg.MaxRejections, cfg.MaxParallel)
 			}
 		})
+	}
+}
+
+func TestTriggerReadsWorktreeEnv(t *testing.T) {
+	path := filepath.Join(t.TempDir(), ".env")
+	writeFile(t, path, "# comentario\n\nCOMPOSE_PROJECT_NAME=todo-issue-22\nAPP_PORT=13022\n")
+	env, err := readEnv(path)
+	if err != nil || !reflect.DeepEqual(env, []string{"COMPOSE_PROJECT_NAME=todo-issue-22", "APP_PORT=13022"}) {
+		t.Fatalf("readEnv must return the variables of the .env: %q, %v", env, err)
+	}
+	writeFile(t, path, "export APP_PORT=13022\n")
+	if _, err := readEnv(path); err == nil {
+		t.Fatal("readEnv must reject lines that are not KEY=VALUE")
+	}
+	if env, err := readEnv(filepath.Join(t.TempDir(), "missing")); err != nil || env != nil {
+		t.Fatalf("a missing .env means no variables: %q, %v", env, err)
 	}
 }
 

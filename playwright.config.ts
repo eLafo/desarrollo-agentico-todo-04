@@ -1,7 +1,8 @@
 import { defineConfig } from '@playwright/test';
 
 // Tests de navegador: la aplicación de este directorio, arrancada para los tests con la base
-// de datos de test (GO_ENV=test), en un puerto distinto del 3000 del entorno de desarrollo.
+// de datos de test (GO_ENV=test), en un puerto distinto del de la aplicación en desarrollo
+// (3001 en el checkout principal; en un worktree de bin/tree, el E2E_PORT de su .env).
 const port = Number(process.env.E2E_PORT ?? 3001);
 const baseURL = `http://127.0.0.1:${port}`;
 

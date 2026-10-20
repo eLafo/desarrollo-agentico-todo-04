@@ -7,6 +7,10 @@ interval_seconds: 20
 # y se cede el turno al humano. 1 desactiva el bucle de corrección.
 max_rejections: 3
 
+# Sesiones de claude -p que el trigger lanza a la vez, cada una en el worktree de
+# su caso (trees/issue-N). 1 las lanza de una en una.
+max_parallel: 3
+
 # Invoca el workflow que hayas creado. {{payload}} recibe la foto JSON de cada
 # issue cuyo turno es del agente.
 prompt: >-
