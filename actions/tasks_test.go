@@ -138,6 +138,39 @@ func (as *ActionSuite) Test_TasksEdit_PrefillsTitle() {
 	as.True(task.Completed)
 }
 
+func (as *ActionSuite) Test_TasksCreate_TitleTooLong_Invalid() {
+	title := strings.Repeat("á", 121)
+	res := as.HTML("/tasks").Post(&models.Task{Title: title})
+	as.Equal(422, res.Code)
+	as.Contains(res.Body.String(), "El título no puede superar los 120 caracteres.")
+	as.Contains(res.Body.String(), title)
+
+	count, err := as.DB.Count(&models.Task{})
+	as.NoError(err)
+	as.Equal(0, count)
+}
+
+func (as *ActionSuite) Test_TasksCreate_TitleAtLimit_Valid() {
+	title := strings.Repeat("á", 120)
+	res := as.HTML("/tasks").Post(&models.Task{Title: title})
+	as.Equal(303, res.Code)
+
+	task := &models.Task{}
+	as.NoError(as.DB.First(task))
+	as.Equal(title, task.Title)
+
+	count, err := as.DB.Count(&models.Task{})
+	as.NoError(err)
+	as.Equal(1, count)
+}
+
+func (as *ActionSuite) Test_TasksEdit_TitleLimitHelp() {
+	task := as.taskForEditing(false)
+	res := as.HTML("/tasks/%s/edit", task.ID).Get()
+	as.Equal(200, res.Code)
+	as.Contains(res.Body.String(), "Hasta 120 caracteres. Los demás datos de la tarea no cambian.")
+}
+
 func (as *ActionSuite) Test_TasksEdit_NotFound() {
 	res := as.HTML("/tasks/%s/edit", uuid.Must(uuid.NewV4())).Get()
 	as.Equal(404, res.Code)
@@ -210,10 +243,10 @@ func (as *ActionSuite) Test_TasksUpdate_OnlySpaces() {
 
 func (as *ActionSuite) Test_TasksUpdate_TitleTooLong() {
 	task := as.taskForEditing(false)
-	title := strings.Repeat("á", models.TitleMaxLength+1)
+	title := strings.Repeat("á", 121)
 	res := as.HTML("/tasks/%s", task.ID).Put(url.Values{"title": {title}})
 	as.Equal(422, res.Code)
-	as.Contains(res.Body.String(), "El título no puede superar los 200 caracteres.")
+	as.Contains(res.Body.String(), "El título no puede superar los 120 caracteres.")
 	as.Contains(res.Body.String(), title)
 	as.NoError(as.DB.Reload(task))
 	as.Equal("Título original", task.Title)
@@ -221,7 +254,7 @@ func (as *ActionSuite) Test_TasksUpdate_TitleTooLong() {
 
 func (as *ActionSuite) Test_TasksUpdate_TitleAtLimit() {
 	task := as.taskForEditing(false)
-	title := strings.Repeat("á", models.TitleMaxLength)
+	title := strings.Repeat("á", 120)
 	res := as.HTML("/tasks/%s", task.ID).Put(url.Values{"title": {title}})
 	as.Equal(303, res.Code)
 	as.NoError(as.DB.Reload(task))

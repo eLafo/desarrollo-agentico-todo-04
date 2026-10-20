@@ -35,7 +35,7 @@ Una tabla, `tasks`:
 | Columna | Tipo | Notas |
 | --- | --- | --- |
 | `id` | uuid | Clave primaria |
-| `title` | string(200) | Obligatorio; hasta 200 caracteres (`models.TitleMaxLength`) |
+| `title` | string(200) | Obligatorio; hasta 120 caracteres (`models.TitleMaxLength`), que comprueba el modelo; la columna admite 200 |
 | `completed` | bool | `false` por defecto |
 | `created_at`, `updated_at` | timestamp | Los pone Pop |
 

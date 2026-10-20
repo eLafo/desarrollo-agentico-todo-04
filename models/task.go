@@ -11,7 +11,7 @@ import (
 )
 
 // TitleMaxLength es el número máximo de caracteres permitido en el título.
-const TitleMaxLength = 200
+const TitleMaxLength = 120
 
 // Task representa una tarea de la lista.
 type Task struct {

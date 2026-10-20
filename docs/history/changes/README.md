@@ -25,3 +25,8 @@ Entre tres y cinco condiciones por documento, y las entradas en orden por númer
   - Cuando se cambie la protección CSRF o los campos que envía el formulario de una tarea
   - Cuando se investigue una tarea que cambia en pantalla pero vuelve a su estado al recargar
   - Cuando se escriban tests de navegador en `e2e/tareas/` que dependan de recargar la página
+- [feature-22-limitar-el-titulo-de-una-tarea-a-120-caracteres.md](feature-22-limitar-el-titulo-de-una-tarea-a-120-caracteres.md): el título de una tarea baja de 200 a 120 caracteres en el modelo, los dos campos y la ayuda de edición
+  - Cuando se modifique `models.TitleMaxLength`, la validación del título en `models/task.go` o sus mensajes
+  - Cuando se cambie `maxlength` o la ayuda del título en `templates/tasks/index.plush.html` o `templates/tasks/edit.plush.html`
+  - Cuando se cambie el tamaño de la columna `title` de `tasks` o se haga una migración sobre ella
+  - Cuando se investigue una tarea antigua de más de 120 caracteres que no se puede guardar al editar, o un emoji que cuenta doble en el campo
