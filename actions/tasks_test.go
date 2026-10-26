@@ -275,3 +275,150 @@ func (as *ActionSuite) Test_TasksUpdate_Invalid_PageTitle() {
 	as.Equal(422, res.Code)
 	as.assertPageTitle(res.Body.String())
 }
+
+// createTasks crea las tareas con esos títulos, en ese orden.
+func (as *ActionSuite) createTasks(titles ...string) []*models.Task {
+	tasks := []*models.Task{}
+	for _, title := range titles {
+		task := &models.Task{Title: title}
+		verrs, err := as.DB.ValidateAndCreate(task)
+		as.NoError(err)
+		as.False(verrs.HasAny())
+		tasks = append(tasks, task)
+	}
+	return tasks
+}
+
+// taskTitles devuelve los títulos guardados, en el orden de la lista.
+func (as *ActionSuite) taskTitles() []string {
+	tasks, err := models.AllTasks(as.DB)
+	as.NoError(err)
+	titles := []string{}
+	for _, task := range tasks {
+		titles = append(titles, task.Title)
+	}
+	return titles
+}
+
+// assertListOrder comprueba que la página muestra los títulos en ese orden.
+func (as *ActionSuite) assertListOrder(body string, titles ...string) {
+	last := -1
+	for _, title := range titles {
+		index := strings.Index(body, `<span class="task-title">`+title+`</span>`)
+		as.NotEqual(-1, index, "falta la tarea %q", title)
+		as.Greater(index, last, "la tarea %q sale antes de lo esperado", title)
+		last = index
+	}
+}
+
+func (as *ActionSuite) Test_TasksIndex_ShowsSavedOrder() {
+	tasks := as.createTasks("A", "B", "C")
+	as.NoError(tasks[2].MoveTo(as.DB, 0))
+
+	res := as.HTML("/").Get()
+	as.Equal(200, res.Code)
+	as.assertListOrder(res.Body.String(), "C", "A", "B")
+}
+
+func (as *ActionSuite) Test_TasksIndex_MoveButtons() {
+	tasks := as.createTasks("A", "B", "C")
+
+	res := as.HTML("/").Get()
+	body := res.Body.String()
+	for _, task := range tasks {
+		as.Contains(body, `action="/tasks/`+task.ID.String()+`/move"`)
+		as.Contains(body, "Subir tarea: "+task.Title)
+		as.Contains(body, "Bajar tarea: "+task.Title)
+	}
+
+	start := strings.Index(body, `action="/tasks/`+tasks[1].ID.String()+`/move"`)
+	end := start + strings.Index(body[start:], "</form>")
+	form := body[start:end]
+	as.Contains(form, `name="position" value="0"`)
+	as.Contains(form, `name="position" value="2"`)
+}
+
+func (as *ActionSuite) Test_TasksMove_Persists() {
+	tasks := as.createTasks("A", "B", "C")
+
+	res := as.HTML("/tasks/%s/move", tasks[0].ID).Put(url.Values{"position": {"2"}})
+	as.Equal(303, res.Code)
+	as.Equal("/", res.Header().Get("Location"))
+
+	as.Equal([]string{"B", "C", "A"}, as.taskTitles())
+}
+
+func (as *ActionSuite) Test_TasksMove_CompletedTask() {
+	tasks := as.createTasks("A", "B", "C")
+	tasks[0].Completed = true
+	as.NoError(as.DB.Update(tasks[0]))
+
+	res := as.HTML("/tasks/%s/move", tasks[0].ID).Put(url.Values{"position": {"2"}})
+	as.Equal(303, res.Code)
+
+	as.Equal([]string{"B", "C", "A"}, as.taskTitles())
+	as.NoError(as.DB.Reload(tasks[0]))
+	as.True(tasks[0].Completed)
+}
+
+func (as *ActionSuite) Test_TasksMove_OutOfRange() {
+	tasks := as.createTasks("A", "B", "C")
+
+	res := as.HTML("/tasks/%s/move", tasks[0].ID).Put(url.Values{"position": {"-1"}})
+	as.Equal(303, res.Code)
+	as.Equal([]string{"A", "B", "C"}, as.taskTitles())
+
+	res = as.HTML("/tasks/%s/move", tasks[0].ID).Put(url.Values{"position": {"99"}})
+	as.Equal(303, res.Code)
+	as.Equal([]string{"B", "C", "A"}, as.taskTitles())
+}
+
+func (as *ActionSuite) Test_TasksMove_InvalidPosition() {
+	tasks := as.createTasks("A", "B", "C")
+
+	res := as.HTML("/tasks/%s/move", tasks[0].ID).Put(url.Values{"position": {"abc"}})
+	as.Equal(422, res.Code)
+
+	res = as.HTML("/tasks/%s/move", tasks[0].ID).Put(url.Values{})
+	as.Equal(422, res.Code)
+
+	as.Equal([]string{"A", "B", "C"}, as.taskTitles())
+}
+
+func (as *ActionSuite) Test_TasksMove_NotFound() {
+	res := as.HTML("/tasks/%s/move", uuid.Must(uuid.NewV4())).Put(url.Values{"position": {"0"}})
+	as.Equal(404, res.Code)
+}
+
+func (as *ActionSuite) Test_TasksMove_InvalidID() {
+	res := as.HTML("/tasks/no-es-un-uuid/move").Put(url.Values{"position": {"0"}})
+	as.Equal(404, res.Code)
+}
+
+func (as *ActionSuite) Test_TasksCreate_AppendsAtEnd() {
+	tasks := as.createTasks("A", "B", "C")
+	as.NoError(tasks[2].MoveTo(as.DB, 0))
+
+	res := as.HTML("/tasks").Post(&models.Task{Title: "D"})
+	as.Equal(303, res.Code)
+	as.Equal([]string{"C", "A", "B", "D"}, as.taskTitles())
+
+	res = as.HTML("/").Get()
+	as.assertListOrder(res.Body.String(), "C", "A", "B", "D")
+}
+
+func (as *ActionSuite) Test_TasksToggle_KeepsPosition() {
+	tasks := as.createTasks("A", "B", "C")
+	as.NoError(tasks[2].MoveTo(as.DB, 0))
+
+	res := as.HTML("/tasks/%s/toggle", tasks[0].ID).Put(url.Values{})
+	as.Equal(303, res.Code)
+	as.Equal([]string{"C", "A", "B"}, as.taskTitles())
+
+	res = as.HTML("/tasks/%s/toggle", tasks[0].ID).Put(url.Values{})
+	as.Equal(303, res.Code)
+	as.Equal([]string{"C", "A", "B"}, as.taskTitles())
+
+	res = as.HTML("/").Get()
+	as.assertListOrder(res.Body.String(), "C", "A", "B")
+}
